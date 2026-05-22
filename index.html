@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#11100e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Diary" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Diary Integration</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand-row">
+          <div>
+            <h1>Diary</h1>
+            <p>Local notes</p>
+          </div>
+          <button class="icon-button mobile-only" id="closeSidebar" title="Close navigation" aria-label="Close navigation">x</button>
+        </div>
+
+        <div class="action-grid">
+          <button id="newNoteButton">+ Note</button>
+          <button id="newFolderButton">+ Folder</button>
+        </div>
+
+        <label class="search-box">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="Title or body" />
+        </label>
+
+        <section class="folder-section">
+          <div class="section-heading">
+            <span>Folders</span>
+          </div>
+          <div class="folder-tools">
+            <button class="mini-button" id="renameFolderButton" title="Rename selected folder">Rename</button>
+            <button class="mini-button danger-button" id="deleteFolderButton" title="Delete selected folder">Delete</button>
+          </div>
+          <nav class="folder-list" id="folderList" aria-label="Folders"></nav>
+        </section>
+
+        <section class="import-section">
+          <div class="section-heading">
+            <span>Import</span>
+          </div>
+          <label class="secondary-button file-button">
+            Evernote ENEX
+            <input id="evernoteImportInput" type="file" accept=".enex,application/xml,text/xml" multiple />
+          </label>
+          <label class="secondary-button file-button">
+            Google Keep
+            <input id="keepImportInput" type="file" accept=".json,.html,.htm,application/json,text/html" multiple />
+          </label>
+          <button class="secondary-button" id="backupButton">Export sync file</button>
+          <label class="secondary-button file-button">
+            Import sync file
+            <input id="restoreInput" type="file" accept="application/json" />
+          </label>
+          <p class="import-status" id="importStatus"></p>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="mobile-topbar">
+          <button class="menu-button" id="openSidebar" title="Open navigation" aria-label="Open navigation">Menu</button>
+          <span>Diary</span>
+          <button class="icon-button" id="mobileNewNote" title="New note" aria-label="New note">+</button>
+        </header>
+
+        <section class="note-list-panel">
+          <div class="panel-heading">
+            <div>
+              <p id="activeFolderLabel">Choose a folder</p>
+              <h2 id="noteCount">0 notes</h2>
+            </div>
+            <div class="panel-actions">
+              <button class="move-note-button" id="moveNoteButton">Move note</button>
+              <button class="collapse-list-button" id="collapseListButton" aria-label="Hide note list">&lt;</button>
+            </div>
+          </div>
+          <div class="note-list" id="noteList"></div>
+        </section>
+
+        <section class="editor-panel">
+          <button class="show-list-button" id="showListButton" hidden>Notes</button>
+          <div class="empty-state" id="emptyState">
+            <h2>No note selected</h2>
+            <p>Create or select a note to begin.</p>
+          </div>
+
+          <article class="editor-card" id="editorCard" hidden>
+            <div class="editor-meta">
+              <span id="createdAtLabel"></span>
+              <span id="updatedAtLabel"></span>
+            </div>
+            <input class="title-input" id="titleInput" placeholder="Untitled" />
+            <div class="body-editor" id="bodyEditor" contenteditable="true" data-placeholder="Write your note..."></div>
+
+            <div class="toolbar-wrap">
+              <button class="toolbar-toggle" id="showToolbarButton" aria-label="Show editor tools">^</button>
+              <div class="bottom-toolbar collapsed" id="bottomToolbar" role="toolbar" aria-label="Editor toolbar">
+                <button class="toolbar-toggle" id="hideToolbarButton" aria-label="Hide editor tools">v</button>
+                <button data-command="bold" title="Bold"><strong>B</strong></button>
+                <button data-command="italic" title="Italic"><em>I</em></button>
+                <button data-command="underline" title="Underline"><u>U</u></button>
+                <button data-command="insertUnorderedList" title="Bullet list">Bullets</button>
+                <button data-command="insertOrderedList" title="Numbered list">1.</button>
+                <button data-command="createLink" title="Insert link">Link</button>
+                <select id="fontSizeSelect" title="Font size">
+                  <option value="">Size</option>
+                  <option value="2">Small</option>
+                  <option value="3">Normal</option>
+                  <option value="5">Large</option>
+                  <option value="7">Huge</option>
+                </select>
+                <input id="fontColorInput" type="color" title="Font color" value="#f6f1e8" />
+                <button id="imageButton" title="Insert image">Image</button>
+                <input id="imageInput" type="file" accept="image/*" />
+                <button data-command="undo" title="Undo">Undo</button>
+                <button data-command="redo" title="Redo">Redo</button>
+                <button id="saveNoteButton" title="Save note">Save</button>
+                <button id="deleteNoteButton" class="danger-button" title="Delete note">Delete</button>
+              </div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="move-dialog" id="moveDialog">
+      <form method="dialog" class="move-form" id="moveForm">
+        <div class="move-heading">
+          <h2>Move note</h2>
+          <button class="icon-button" value="cancel" aria-label="Close move dialog">x</button>
+        </div>
+        <div class="move-folder-list" id="moveFolderList"></div>
+      </form>
+    </dialog>
+
+    <dialog class="folder-dialog" id="folderDialog">
+      <form method="dialog" class="move-form" id="folderForm">
+        <div class="move-heading">
+          <h2 id="folderDialogTitle">Folder</h2>
+          <button class="icon-button" value="cancel" aria-label="Close folder dialog">x</button>
+        </div>
+        <label class="folder-name-field">
+          <span>Folder name</span>
+          <input id="folderNameInput" type="text" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel">Cancel</button>
+          <button class="secondary-button" id="confirmFolderButton" value="default">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <form method="dialog" class="move-form" id="confirmForm">
+        <div class="move-heading">
+          <h2 id="confirmTitle">Confirm</h2>
+          <button class="icon-button" value="cancel" aria-label="Close confirm dialog">x</button>
+        </div>
+        <p class="confirm-message" id="confirmMessage"></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel">Cancel</button>
+          <button class="secondary-button danger-button" id="confirmActionButton" value="confirm">Delete</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
