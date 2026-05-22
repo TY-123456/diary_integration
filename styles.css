@@ -182,6 +182,10 @@ button:disabled {
   background: #2b2619;
 }
 
+.trash-button {
+  margin-top: 8px;
+}
+
 .secondary-button,
 .file-button {
   display: flex;
@@ -212,6 +216,7 @@ button:disabled {
 }
 
 .note-list-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -235,9 +240,32 @@ button:disabled {
   letter-spacing: 0;
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .move-note-button {
   min-height: 40px;
   white-space: nowrap;
+}
+
+.collapse-list-button {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  z-index: 4;
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  transform: translateY(-50%);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .note-list {
@@ -381,10 +409,24 @@ button:disabled {
 }
 
 .note-list-collapsed .workspace {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
 }
 
 .note-list-collapsed .note-list-panel {
+  display: block;
+  overflow: visible;
+}
+
+.note-list-collapsed .note-list-panel .panel-heading {
+  min-height: 100%;
+  border-bottom: 0;
+  padding: 0;
+}
+
+.note-list-collapsed .note-list-panel .panel-heading > div:first-child,
+.note-list-collapsed .note-list,
+.note-list-collapsed .move-note-button,
+.note-list-collapsed #restoreNoteButton {
   display: none;
 }
 
@@ -449,17 +491,29 @@ button:disabled {
   bottom: 16px;
   width: fit-content;
   max-width: 100%;
+  padding-top: 22px;
 }
 
 .toolbar-toggle {
-  min-width: 42px;
-  min-height: 38px;
-  border-radius: 8px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  min-width: 46px;
+  width: 46px;
+  min-height: 22px;
+  height: 22px;
+  border-radius: 8px 8px 0 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  transform: translateX(-50%);
+  box-shadow: none;
 }
 
 .bottom-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
   width: fit-content;
@@ -472,7 +526,11 @@ button:disabled {
   backdrop-filter: blur(16px);
 }
 
-.bottom-toolbar.collapsed {
+.optional-tools {
+  display: contents;
+}
+
+.tools-collapsed .optional-tools {
   display: none;
 }
 
@@ -492,6 +550,23 @@ button:disabled {
   padding: 4px;
 }
 
+.history-button {
+  font-size: 0;
+}
+
+.history-button::before {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.undo-button::before {
+  content: "\21B6";
+}
+
+.redo-button::before {
+  content: "\21B7";
+}
+
 .danger-button {
   border-color: rgba(236, 111, 102, 0.5);
   color: var(--danger);
@@ -507,6 +582,14 @@ button:disabled {
   min-height: 40px;
   padding: 0 10px;
   border-radius: 8px;
+}
+
+.new-note-mobile-button {
+  min-width: 72px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-weight: 750;
 }
 
 .mobile-only {
@@ -623,22 +706,23 @@ button:disabled {
   .bottom-toolbar #fontSizeSelect,
   .bottom-toolbar #fontColorInput,
   .bottom-toolbar #imageButton {
+    min-width: 42px;
+  }
+
+  .bottom-toolbar {
+    overflow-x: auto;
+  }
+
+  .tools-collapsed .optional-tools {
     display: none;
   }
 
-  .bottom-toolbar [data-command="undo"],
-  .bottom-toolbar [data-command="redo"] {
-    font-size: 0;
-  }
-
-  .bottom-toolbar [data-command="undo"]::before {
-    content: "<";
-    font-size: 18px;
-  }
-
-  .bottom-toolbar [data-command="redo"]::before {
-    content: ">";
-    font-size: 18px;
+  .bottom-toolbar #deleteNoteButton {
+    min-width: 58px;
+    max-width: 88px;
+    overflow-wrap: anywhere;
+    padding: 0 8px;
+    font-size: 12px;
   }
 }
 

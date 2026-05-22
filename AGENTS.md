@@ -22,6 +22,8 @@ The app should support:
 - Imported creation time must remain immutable after import.
 - New notes should record `createdAt` automatically and keep it unchanged after edits.
 - Edited notes should update `updatedAt`.
+- Deleting a note should first move it to Trash so it can be recovered before permanent deletion.
+- Mobile export and navigation flows are required, including browser Back returning to the menu first.
 
 ## Recommended MVP
 
@@ -58,6 +60,7 @@ On mobile:
 The left sidebar should feel similar to Codex's chat sidebar:
 
 - Folder list.
+- Trash button under the folder list.
 - New note button.
 - New folder button.
 - Import buttons for Evernote and Google Keep.
@@ -74,6 +77,15 @@ Each note editor must include:
 - Font color control.
 - Image insert button.
 - Basic formatting controls: bold, italic, underline, bullet list, numbered list, link, undo, redo.
+- The editor toolbar must support a Word-like hide/unhide control at the top middle of the toolbar.
+- When editor tools are hidden, Undo, Redo, Save, and Delete must remain visible in the same row.
+- Undo and Redo should use curved arrow icons and should not open the mobile keyboard when tapped.
+
+### Note List
+
+- The note list window should have a center-edge hide/unhide button.
+- The hide/unhide button icon must reverse direction depending on the current state.
+- The Move note dialog close button must dismiss the dialog and return to the note list.
 
 Use compact icon buttons where possible. Avoid explanatory text inside the app UI unless it is necessary for an empty state, error, or confirmation dialog.
 
@@ -108,6 +120,8 @@ Recommended fields:
 - `attachments`: list of attachment IDs.
 - `metadata`: provider-specific data that should be preserved but not shown directly.
 - `importedAt`: timestamp when the note was imported.
+- `deletedAt`: timestamp when the note was moved to Trash, or null when active.
+- `originalFolderId`: folder ID used when restoring a trashed note.
 
 ### Folder
 
@@ -211,6 +225,14 @@ Google Keep does not have the same mature public import API surface as many Goog
 - Never modify `createdAt` after note creation or import.
 - Update `updatedAt` only when the note content, title, folder, tags, or attachments change.
 
+## Trash And Recovery
+
+- A Trash button must appear under the folder list.
+- Deleting a note moves it to Trash instead of deleting it permanently.
+- Trashed notes should be recoverable to their original folder when possible.
+- If the original folder no longer exists, restore to an existing folder or create a default folder.
+- Permanent deletion should only be available from Trash.
+
 ## Import Conflict Handling
 
 When importing the same provider note more than once:
@@ -229,7 +251,6 @@ When importing the same provider note more than once:
 - Backup and restore.
 - End-to-end encryption or local password lock.
 - Pin/favorite notes.
-- Trash/recovery before permanent delete.
 - Bulk move notes between folders.
 - Duplicate note.
 - Keyboard shortcuts.
@@ -246,4 +267,3 @@ When importing the same provider note more than once:
 - Preserve source metadata even if the current UI does not show it.
 - Add tests around import timestamp preservation, duplicate import handling, and attachment mapping.
 - Use responsive layout checks before considering UI work complete.
-

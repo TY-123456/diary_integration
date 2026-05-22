@@ -1,6 +1,7 @@
 const DB_NAME = "diary-integration-db";
 const DB_VERSION = 1;
 const LEGACY_INBOX_FOLDER_ID = "folder-inbox";
+const TRASH_FOLDER_ID = "trash";
 
 const state = {
   db: null,
@@ -23,11 +24,15 @@ const els = {
   renameFolderButton: document.querySelector("#renameFolderButton"),
   deleteFolderButton: document.querySelector("#deleteFolderButton"),
   folderList: document.querySelector("#folderList"),
+  trashButton: document.querySelector("#trashButton"),
+  trashCount: document.querySelector("#trashCount"),
   moveNoteButton: document.querySelector("#moveNoteButton"),
+  restoreNoteButton: document.querySelector("#restoreNoteButton"),
   collapseListButton: document.querySelector("#collapseListButton"),
   showListButton: document.querySelector("#showListButton"),
   moveDialog: document.querySelector("#moveDialog"),
   moveForm: document.querySelector("#moveForm"),
+  closeMoveDialog: document.querySelector("#closeMoveDialog"),
   moveFolderList: document.querySelector("#moveFolderList"),
   searchInput: document.querySelector("#searchInput"),
   activeFolderLabel: document.querySelector("#activeFolderLabel"),
@@ -43,9 +48,9 @@ const els = {
   fontColorInput: document.querySelector("#fontColorInput"),
   imageButton: document.querySelector("#imageButton"),
   imageInput: document.querySelector("#imageInput"),
+  toolbarWrap: document.querySelector("#toolbarWrap"),
   bottomToolbar: document.querySelector("#bottomToolbar"),
-  showToolbarButton: document.querySelector("#showToolbarButton"),
-  hideToolbarButton: document.querySelector("#hideToolbarButton"),
+  toolbarToggleButton: document.querySelector("#toolbarToggleButton"),
   saveNoteButton: document.querySelector("#saveNoteButton"),
   deleteNoteButton: document.querySelector("#deleteNoteButton"),
   evernoteImportInput: document.querySelector("#evernoteImportInput"),
@@ -183,6 +188,7 @@ async function removeOrphanNotes() {
   const folderIds = new Set(folders.map((folder) => folder.id));
   const notes = await getAll("notes");
   for (const note of notes) {
+    if (note.deletedAt) continue;
     if (!note.folderId || !folderIds.has(note.folderId)) {
       await remove("notes", note.id);
     }
@@ -192,7 +198,7 @@ async function removeOrphanNotes() {
 async function loadState() {
   state.folders = (await getAll("folders")).sort((a, b) => a.name.localeCompare(b.name));
   state.notes = (await getAll("notes")).map(repairDisplayNote).sort(compareNotesByCreatedDesc);
-  if (!state.folders.some((folder) => folder.id === state.activeFolderId)) {
+  if (state.activeFolderId !== TRASH_FOLDER_ID && !state.folders.some((folder) => folder.id === state.activeFolderId)) {
     state.activeFolderId = state.folders[0]?.id || null;
   }
   const folderNotes = filteredNotes();
@@ -208,6 +214,8 @@ function repairDisplayNote(note) {
     ...note,
     title: repairedTitle,
     body: note.body || "",
+    deletedAt: note.deletedAt || null,
+    originalFolderId: note.originalFolderId || null,
   };
 }
 
@@ -224,13 +232,20 @@ function activeNote() {
 }
 
 function activeFolder() {
+  if (state.activeFolderId === TRASH_FOLDER_ID) {
+    return { id: TRASH_FOLDER_ID, name: "Trash" };
+  }
   return state.folders.find((folder) => folder.id === state.activeFolderId) || null;
 }
 
 function filteredNotes() {
   const query = state.search.trim().toLowerCase();
   return state.notes.filter((note) => {
-    const folderMatches = state.activeFolderId && note.folderId === state.activeFolderId;
+    const isDeleted = Boolean(note.deletedAt);
+    const folderMatches =
+      state.activeFolderId === TRASH_FOLDER_ID
+        ? isDeleted
+        : state.activeFolderId && note.folderId === state.activeFolderId && !isDeleted;
     const queryMatches = !query || `${note.title} ${textFromHtml(note.body)}`.toLowerCase().includes(query);
     return folderMatches && queryMatches;
   });
@@ -245,17 +260,24 @@ function render() {
 
 function renderFolders() {
   const buttons = state.folders.map((folder) => {
-      const count = state.notes.filter((note) => note.folderId === folder.id).length;
+      const count = state.notes.filter((note) => note.folderId === folder.id && !note.deletedAt).length;
       return `<button class="folder-button ${state.activeFolderId === folder.id ? "active" : ""}" data-folder-id="${folder.id}"><span>${escapeHtml(folder.name)}</span><span>${count}</span></button>`;
     });
   els.folderList.innerHTML = buttons.join("");
+  const trashCount = state.notes.filter((note) => note.deletedAt).length;
+  els.trashCount.textContent = String(trashCount);
+  els.trashButton.classList.toggle("active", state.activeFolderId === TRASH_FOLDER_ID);
 }
 
 function renderMoveButton() {
   const note = activeNote();
+  const inTrash = state.activeFolderId === TRASH_FOLDER_ID;
+  els.moveNoteButton.hidden = inTrash;
+  els.restoreNoteButton.hidden = !inTrash;
   els.moveNoteButton.disabled = !note || state.folders.length < 2;
+  els.restoreNoteButton.disabled = !note;
 
-  const hasActiveFolder = Boolean(activeFolder());
+  const hasActiveFolder = Boolean(activeFolder()) && !inTrash;
   els.renameFolderButton.disabled = !hasActiveFolder;
   els.deleteFolderButton.disabled = !hasActiveFolder;
 }
@@ -297,7 +319,8 @@ function renderEditor() {
     els.bodyEditor.innerHTML = note.body || "";
   }
   els.createdAtLabel.textContent = `Created ${formatDate(note.createdAt)}`;
-  els.updatedAtLabel.textContent = `Updated ${formatDate(note.updatedAt)}`;
+  els.updatedAtLabel.textContent = note.deletedAt ? `In trash ${formatDate(note.deletedAt)}` : `Updated ${formatDate(note.updatedAt)}`;
+  els.deleteNoteButton.textContent = note.deletedAt ? "Delete Forever" : "Delete";
 }
 
 function escapeHtml(value) {
@@ -377,19 +400,24 @@ async function renameActiveFolder() {
 
 async function deleteActiveFolder() {
   const folder = activeFolder();
-  if (!folder) return;
+  if (!folder || folder.id === TRASH_FOLDER_ID) return;
 
-  const notesInFolder = state.notes.filter((note) => note.folderId === folder.id).length;
+  const notesInFolder = state.notes.filter((note) => note.folderId === folder.id && !note.deletedAt).length;
   const ok = await confirmAction({
     title: "Delete folder",
-    message: `Delete "${folder.name}" and ${notesInFolder} note(s)?`,
+    message: `Move "${folder.name}" and ${notesInFolder} note(s) to Trash?`,
     actionLabel: "Delete",
   });
   if (!ok) return;
 
   const timestamp = nowIso();
-  for (const note of state.notes.filter((item) => item.folderId === folder.id)) {
-    await remove("notes", note.id);
+  for (const note of state.notes.filter((item) => item.folderId === folder.id && !item.deletedAt)) {
+    await put("notes", {
+      ...note,
+      deletedAt: timestamp,
+      originalFolderId: folder.id,
+      updatedAt: timestamp,
+    });
   }
   await remove("folders", folder.id);
   state.activeFolderId = state.folders.find((item) => item.id !== folder.id)?.id || null;
@@ -399,6 +427,9 @@ async function deleteActiveFolder() {
 
 async function createNote() {
   let folderId = state.activeFolderId;
+  if (folderId === TRASH_FOLDER_ID) {
+    folderId = state.folders[0]?.id || null;
+  }
   if (!folderId) {
     const folder = await ensureStandaloneFolder("Notes");
     folderId = folder.id;
@@ -425,6 +456,8 @@ async function createNote() {
   await put("notes", note);
   state.activeNoteId = note.id;
   state.activeFolderId = folderId;
+  els.sidebar.classList.remove("open");
+  enterContentState();
   await loadState();
   els.titleInput.focus();
 }
@@ -436,7 +469,7 @@ function scheduleNoteSave() {
 
 async function saveCurrentNote() {
   const note = activeNote();
-  if (!note) return;
+  if (!note || note.deletedAt) return;
 
   const updated = {
     ...note,
@@ -455,7 +488,7 @@ async function saveCurrentNote() {
 
 async function moveCurrentNote(folderId) {
   const note = activeNote();
-  if (!note || !state.folders.some((folder) => folder.id === folderId)) return;
+  if (!note || note.deletedAt || !state.folders.some((folder) => folder.id === folderId)) return;
   await put("notes", { ...note, folderId, updatedAt: nowIso() });
   state.activeFolderId = folderId;
   await loadState();
@@ -482,7 +515,10 @@ function openMoveDialog() {
 async function submitMoveDialog(event) {
   event.preventDefault();
   const button = event.submitter;
-  if (!button?.value || button.value === "cancel") return;
+  if (!button?.value || button.value === "cancel") {
+    closeMoveDialog();
+    return;
+  }
   await moveCurrentNote(button.value);
   els.moveDialog.close();
 }
@@ -490,16 +526,62 @@ async function submitMoveDialog(event) {
 async function deleteCurrentNote() {
   const note = activeNote();
   if (!note) return;
+  if (note.deletedAt) {
+    const ok = await confirmAction({
+      title: "Delete forever",
+      message: `Permanently delete "${note.title || "Untitled"}"? This cannot be recovered.`,
+      actionLabel: "Delete Forever",
+    });
+    if (!ok) return;
+    await remove("notes", note.id);
+    const nextNote = filteredNotes().find((item) => item.id !== note.id);
+    state.activeNoteId = nextNote?.id || null;
+    await loadState();
+    return;
+  }
+
   const ok = await confirmAction({
     title: "Delete note",
-    message: `Delete "${note.title || "Untitled"}"?`,
+    message: `Move "${note.title || "Untitled"}" to Trash? You can recover it later.`,
     actionLabel: "Delete",
   });
   if (!ok) return;
-  await remove("notes", note.id);
+  const timestamp = nowIso();
+  await put("notes", {
+    ...note,
+    deletedAt: timestamp,
+    originalFolderId: note.folderId,
+    updatedAt: timestamp,
+  });
   const nextNote = filteredNotes().find((item) => item.id !== note.id);
   state.activeNoteId = nextNote?.id || null;
   await loadState();
+}
+
+async function restoreCurrentNote() {
+  const note = activeNote();
+  if (!note?.deletedAt) return;
+  let folderId = note.originalFolderId && state.folders.some((folder) => folder.id === note.originalFolderId) ? note.originalFolderId : null;
+  if (!folderId) {
+    const folder = state.folders[0] || (await ensureStandaloneFolder("Notes"));
+    folderId = folder.id;
+  }
+  const timestamp = nowIso();
+  await put("notes", {
+    ...note,
+    folderId,
+    deletedAt: null,
+    originalFolderId: null,
+    updatedAt: timestamp,
+  });
+  state.activeFolderId = folderId;
+  state.activeNoteId = note.id;
+  await loadState();
+}
+
+function closeMoveDialog() {
+  els.moveDialog.close();
+  toggleNoteList(true);
 }
 
 function confirmAction({ title, message, actionLabel }) {
@@ -523,14 +605,18 @@ function submitConfirmDialog(event) {
   }
 }
 
-function toggleToolbar(show) {
-  els.bottomToolbar.classList.toggle("collapsed", !show);
-  els.showToolbarButton.hidden = show;
+function toggleToolbarTools(show) {
+  els.toolbarWrap.classList.toggle("tools-collapsed", !show);
+  els.toolbarToggleButton.textContent = show ? "v" : "^";
+  els.toolbarToggleButton.setAttribute("aria-label", show ? "Hide editor tools" : "Show editor tools");
+  els.toolbarToggleButton.title = show ? "Hide editor tools" : "Show editor tools";
 }
 
 function toggleNoteList(show) {
   document.body.classList.toggle("note-list-collapsed", !show);
-  els.showListButton.hidden = show;
+  els.collapseListButton.textContent = show ? "<" : ">";
+  els.collapseListButton.setAttribute("aria-label", show ? "Hide note list" : "Show note list");
+  els.showListButton.hidden = true;
 }
 
 async function saveNoteAndReturnToMenu() {
@@ -539,6 +625,7 @@ async function saveNoteAndReturnToMenu() {
 }
 
 function runCommand(command) {
+  const shouldRestoreFocus = command !== "undo" && command !== "redo";
   if (command === "createLink") {
     const url = prompt("Link URL");
     if (!url) return;
@@ -546,7 +633,9 @@ function runCommand(command) {
   } else {
     document.execCommand(command, false, null);
   }
-  els.bodyEditor.focus();
+  if (shouldRestoreFocus) {
+    els.bodyEditor.focus();
+  }
   scheduleNoteSave();
 }
 
@@ -581,6 +670,32 @@ function returnToMenuOnMobile() {
   if (window.matchMedia("(max-width: 900px)").matches) {
     els.sidebar.classList.add("open");
   }
+}
+
+function isMobileLayout() {
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+
+function openMenu() {
+  els.sidebar.classList.add("open");
+}
+
+function enterContentState() {
+  if (!isMobileLayout()) return;
+  if (history.state?.diaryView !== "content") {
+    history.pushState({ diaryView: "content" }, "");
+  }
+}
+
+function prepareMobileBackState() {
+  if (!isMobileLayout() || history.state?.diaryView) return;
+  history.replaceState({ diaryView: "menu" }, "");
+  history.pushState({ diaryView: "content" }, "");
+}
+
+function handleMobileBack() {
+  if (!isMobileLayout()) return;
+  openMenu();
 }
 
 async function importFiles(provider, providerName, files) {
@@ -971,7 +1086,7 @@ function looksLikeHtml(value) {
   return /<\/?[a-z][\s\S]*>/i.test(String(value));
 }
 
-function exportBackup() {
+async function exportBackup() {
   const payload = {
     exportedAt: nowIso(),
     version: 2,
@@ -980,13 +1095,35 @@ function exportBackup() {
     folders: state.folders,
     notes: state.notes,
   };
+  const fileName = `diary-sync-${new Date().toISOString().slice(0, 10)}.json`;
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+
+  if (navigator.canShare && navigator.share) {
+    const file = new File([blob], fileName, { type: "application/json" });
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: "Diary sync file" });
+        showImportMessage("Success: sync file exported.");
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") return;
+      }
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `diary-sync-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = fileName;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  showImportMessage("Success: sync file exported.");
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    link.remove();
+  }, 1000);
 }
 
 async function restoreBackup(file) {
@@ -1096,6 +1233,8 @@ function normalizeImportedNote(note, folderIdMap, existingFolders) {
     attachments: Array.isArray(note.attachments) ? note.attachments : [],
     metadata: note.metadata || {},
     importedAt: note.importedAt || null,
+    deletedAt: note.deletedAt || null,
+    originalFolderId: note.originalFolderId || null,
   });
 }
 
@@ -1125,7 +1264,7 @@ function getDeviceLabel() {
 }
 
 function bindEvents() {
-  els.openSidebar.addEventListener("click", () => els.sidebar.classList.add("open"));
+  els.openSidebar.addEventListener("click", () => openMenu());
   els.closeSidebar.addEventListener("click", () => els.sidebar.classList.remove("open"));
   els.newNoteButton.addEventListener("click", createNote);
   els.mobileNewNote.addEventListener("click", createNote);
@@ -1134,31 +1273,48 @@ function bindEvents() {
   els.renameFolderButton.addEventListener("click", renameActiveFolder);
   els.deleteFolderButton.addEventListener("click", deleteActiveFolder);
   els.confirmForm.addEventListener("submit", submitConfirmDialog);
-  els.showToolbarButton.addEventListener("click", () => toggleToolbar(true));
-  els.hideToolbarButton.addEventListener("click", () => toggleToolbar(false));
-  els.collapseListButton.addEventListener("click", () => toggleNoteList(false));
+  els.toolbarToggleButton.addEventListener("click", () => toggleToolbarTools(els.toolbarWrap.classList.contains("tools-collapsed")));
+  els.collapseListButton.addEventListener("click", () => toggleNoteList(document.body.classList.contains("note-list-collapsed")));
   els.showListButton.addEventListener("click", () => toggleNoteList(true));
   els.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
     renderNotes();
+  });
+  els.trashButton.addEventListener("click", () => {
+    state.activeFolderId = TRASH_FOLDER_ID;
+    state.activeNoteId = filteredNotes()[0]?.id || null;
+    els.sidebar.classList.remove("open");
+    enterContentState();
+    render();
   });
   els.folderList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-folder-id]");
     if (!button) return;
     state.activeFolderId = button.dataset.folderId;
     els.sidebar.classList.remove("open");
+    enterContentState();
     render();
   });
   els.noteList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-note-id]");
     if (!button) return;
     state.activeNoteId = button.dataset.noteId;
+    enterContentState();
     render();
   });
   els.moveNoteButton.addEventListener("click", openMoveDialog);
   els.moveForm.addEventListener("submit", submitMoveDialog);
+  els.closeMoveDialog.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeMoveDialog();
+  });
   els.titleInput.addEventListener("input", scheduleNoteSave);
   els.bodyEditor.addEventListener("input", scheduleNoteSave);
+  document.querySelector(".bottom-toolbar").addEventListener("pointerdown", (event) => {
+    if (event.target.closest("[data-command], #saveNoteButton, #deleteNoteButton, #toolbarToggleButton")) {
+      event.preventDefault();
+    }
+  });
   document.querySelector(".bottom-toolbar").addEventListener("click", (event) => {
     const commandButton = event.target.closest("[data-command]");
     if (!commandButton) return;
@@ -1174,6 +1330,7 @@ function bindEvents() {
   });
   els.saveNoteButton.addEventListener("click", saveNoteAndReturnToMenu);
   els.deleteNoteButton.addEventListener("click", deleteCurrentNote);
+  els.restoreNoteButton.addEventListener("click", restoreCurrentNote);
   els.evernoteImportInput.addEventListener("change", (event) => {
     importFiles("evernote", "Evernote", event.target.files);
     event.target.value = "";
@@ -1188,6 +1345,7 @@ function bindEvents() {
     if (file) restoreBackup(file);
     event.target.value = "";
   });
+  window.addEventListener("popstate", handleMobileBack);
 }
 
 async function init() {
@@ -1198,6 +1356,7 @@ async function init() {
   bindEvents();
   registerServiceWorker();
   await loadState();
+  prepareMobileBackState();
   returnToMenuOnMobile();
 }
 

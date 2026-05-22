@@ -44,6 +44,7 @@
             <button class="mini-button danger-button" id="deleteFolderButton" title="Delete selected folder">Delete</button>
           </div>
           <nav class="folder-list" id="folderList" aria-label="Folders"></nav>
+          <button class="folder-button trash-button" id="trashButton" type="button"><span>Trash</span><span id="trashCount">0</span></button>
         </section>
 
         <section class="import-section">
@@ -71,7 +72,7 @@
         <header class="mobile-topbar">
           <button class="menu-button" id="openSidebar" title="Open navigation" aria-label="Open navigation">Menu</button>
           <span>Diary</span>
-          <button class="icon-button" id="mobileNewNote" title="New note" aria-label="New note">+</button>
+          <button class="new-note-mobile-button" id="mobileNewNote" title="New note" aria-label="New note">+ NOTE</button>
         </header>
 
         <section class="note-list-panel">
@@ -82,6 +83,7 @@
             </div>
             <div class="panel-actions">
               <button class="move-note-button" id="moveNoteButton">Move note</button>
+              <button class="move-note-button" id="restoreNoteButton" hidden>Restore</button>
               <button class="collapse-list-button" id="collapseListButton" aria-label="Hide note list">&lt;</button>
             </div>
           </div>
@@ -103,28 +105,29 @@
             <input class="title-input" id="titleInput" placeholder="Untitled" />
             <div class="body-editor" id="bodyEditor" contenteditable="true" data-placeholder="Write your note..."></div>
 
-            <div class="toolbar-wrap">
-              <button class="toolbar-toggle" id="showToolbarButton" aria-label="Show editor tools">^</button>
-              <div class="bottom-toolbar collapsed" id="bottomToolbar" role="toolbar" aria-label="Editor toolbar">
-                <button class="toolbar-toggle" id="hideToolbarButton" aria-label="Hide editor tools">v</button>
-                <button data-command="bold" title="Bold"><strong>B</strong></button>
-                <button data-command="italic" title="Italic"><em>I</em></button>
-                <button data-command="underline" title="Underline"><u>U</u></button>
-                <button data-command="insertUnorderedList" title="Bullet list">Bullets</button>
-                <button data-command="insertOrderedList" title="Numbered list">1.</button>
-                <button data-command="createLink" title="Insert link">Link</button>
-                <select id="fontSizeSelect" title="Font size">
-                  <option value="">Size</option>
-                  <option value="2">Small</option>
-                  <option value="3">Normal</option>
-                  <option value="5">Large</option>
-                  <option value="7">Huge</option>
-                </select>
-                <input id="fontColorInput" type="color" title="Font color" value="#f6f1e8" />
-                <button id="imageButton" title="Insert image">Image</button>
+            <div class="toolbar-wrap tools-collapsed" id="toolbarWrap">
+              <button class="toolbar-toggle" id="toolbarToggleButton" aria-label="Show editor tools" title="Show editor tools">^</button>
+              <div class="bottom-toolbar" id="bottomToolbar" role="toolbar" aria-label="Editor toolbar">
+                <div class="optional-tools" id="optionalTools">
+                  <button data-command="bold" title="Bold"><strong>B</strong></button>
+                  <button data-command="italic" title="Italic"><em>I</em></button>
+                  <button data-command="underline" title="Underline"><u>U</u></button>
+                  <button data-command="insertUnorderedList" title="Bullet list">Bullets</button>
+                  <button data-command="insertOrderedList" title="Numbered list">1.</button>
+                  <button data-command="createLink" title="Insert link">Link</button>
+                  <select id="fontSizeSelect" title="Font size">
+                    <option value="">Size</option>
+                    <option value="2">Small</option>
+                    <option value="3">Normal</option>
+                    <option value="5">Large</option>
+                    <option value="7">Huge</option>
+                  </select>
+                  <input id="fontColorInput" type="color" title="Font color" value="#f6f1e8" />
+                  <button id="imageButton" title="Insert image">Image</button>
+                </div>
                 <input id="imageInput" type="file" accept="image/*" />
-                <button data-command="undo" title="Undo">Undo</button>
-                <button data-command="redo" title="Redo">Redo</button>
+                <button data-command="undo" class="history-button undo-button" title="Undo" aria-label="Undo"></button>
+                <button data-command="redo" class="history-button redo-button" title="Redo" aria-label="Redo"></button>
                 <button id="saveNoteButton" title="Save note">Save</button>
                 <button id="deleteNoteButton" class="danger-button" title="Delete note">Delete</button>
               </div>
@@ -138,7 +141,7 @@
       <form method="dialog" class="move-form" id="moveForm">
         <div class="move-heading">
           <h2>Move note</h2>
-          <button class="icon-button" value="cancel" aria-label="Close move dialog">x</button>
+          <button class="icon-button" id="closeMoveDialog" value="cancel" aria-label="Close move dialog">x</button>
         </div>
         <div class="move-folder-list" id="moveFolderList"></div>
       </form>
