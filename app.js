@@ -12,7 +12,6 @@ const state = {
   search: "",
   saveTimer: null,
   pendingConfirmAction: null,
-  deferredInstallPrompt: null,
 };
 
 const els = {
