@@ -6,6 +6,8 @@ This document summarizes the gaps found when reviewing `required.md` and records
 
 Keep `required.md` as the original request. Use this file for review notes, clarified decisions, and open questions.
 
+See `docs/conversation-integration.md` for the index of older VS Code Codex conversation topics that have been merged into this project.
+
 ## Key Gaps Found
 
 - Storage strategy was not specified.

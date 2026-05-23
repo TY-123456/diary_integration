@@ -199,6 +199,11 @@ button:disabled {
   cursor: pointer;
 }
 
+.exit-button {
+  border-color: #5f3030;
+  color: #ffcfbf;
+}
+
 .file-button input,
 #imageInput {
   display: none;
@@ -425,8 +430,7 @@ button:disabled {
 
 .note-list-collapsed .note-list-panel .panel-heading > div:first-child,
 .note-list-collapsed .note-list,
-.note-list-collapsed .move-note-button,
-.note-list-collapsed #restoreNoteButton {
+.note-list-collapsed .move-note-button {
   display: none;
 }
 
@@ -585,6 +589,9 @@ button:disabled {
 }
 
 .new-note-mobile-button {
+  border-color: var(--line);
+  background: var(--panel-2);
+  color: var(--text);
   min-width: 72px;
   min-height: 40px;
   padding: 0 10px;
@@ -619,6 +626,10 @@ button:disabled {
   .mobile-only {
     display: inline-grid;
     place-items: center;
+  }
+
+  .provider-import-button {
+    display: none;
   }
 
   .workspace {
@@ -710,7 +721,24 @@ button:disabled {
   }
 
   .bottom-toolbar {
-    overflow-x: auto;
+    width: 100%;
+    flex-wrap: wrap;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .bottom-toolbar .optional-tools {
+    order: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .bottom-toolbar > .history-button,
+  .bottom-toolbar > #saveNoteButton,
+  .bottom-toolbar > #deleteNoteButton {
+    order: 1;
   }
 
   .tools-collapsed .optional-tools {

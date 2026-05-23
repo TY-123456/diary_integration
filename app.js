@@ -27,7 +27,6 @@ const els = {
   trashButton: document.querySelector("#trashButton"),
   trashCount: document.querySelector("#trashCount"),
   moveNoteButton: document.querySelector("#moveNoteButton"),
-  restoreNoteButton: document.querySelector("#restoreNoteButton"),
   collapseListButton: document.querySelector("#collapseListButton"),
   showListButton: document.querySelector("#showListButton"),
   moveDialog: document.querySelector("#moveDialog"),
@@ -56,6 +55,7 @@ const els = {
   evernoteImportInput: document.querySelector("#evernoteImportInput"),
   keepImportInput: document.querySelector("#keepImportInput"),
   backupButton: document.querySelector("#backupButton"),
+  exitAppButton: document.querySelector("#exitAppButton"),
   restoreInput: document.querySelector("#restoreInput"),
   importStatus: document.querySelector("#importStatus"),
   folderDialog: document.querySelector("#folderDialog"),
@@ -273,9 +273,7 @@ function renderMoveButton() {
   const note = activeNote();
   const inTrash = state.activeFolderId === TRASH_FOLDER_ID;
   els.moveNoteButton.hidden = inTrash;
-  els.restoreNoteButton.hidden = !inTrash;
   els.moveNoteButton.disabled = !note || state.folders.length < 2;
-  els.restoreNoteButton.disabled = !note;
 
   const hasActiveFolder = Boolean(activeFolder()) && !inTrash;
   els.renameFolderButton.disabled = !hasActiveFolder;
@@ -320,6 +318,8 @@ function renderEditor() {
   }
   els.createdAtLabel.textContent = `Created ${formatDate(note.createdAt)}`;
   els.updatedAtLabel.textContent = note.deletedAt ? `In trash ${formatDate(note.deletedAt)}` : `Updated ${formatDate(note.updatedAt)}`;
+  els.saveNoteButton.textContent = note.deletedAt ? "Restore" : "Save";
+  els.saveNoteButton.title = note.deletedAt ? "Restore note" : "Save note";
   els.deleteNoteButton.textContent = note.deletedAt ? "Delete Forever" : "Delete";
 }
 
@@ -619,9 +619,28 @@ function toggleNoteList(show) {
   els.showListButton.hidden = true;
 }
 
-async function saveNoteAndReturnToMenu() {
+async function saveOrRestoreNoteAndReturnToMenu() {
+  const note = activeNote();
+  if (note?.deletedAt) {
+    await restoreCurrentNote();
+    return;
+  }
   await saveCurrentNote();
   returnToMenuOnMobile();
+}
+
+async function exitApp() {
+  if (activeNote() && !activeNote().deletedAt) {
+    await saveCurrentNote();
+  }
+  els.sidebar.classList.remove("open");
+  showImportMessage("Closing app...");
+  window.close();
+  window.setTimeout(() => {
+    if (document.visibilityState === "visible") {
+      window.location.href = "about:blank";
+    }
+  }, 250);
 }
 
 function runCommand(command) {
@@ -1086,6 +1105,20 @@ function looksLikeHtml(value) {
   return /<\/?[a-z][\s\S]*>/i.test(String(value));
 }
 
+function exportFileName() {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const fallback = `diary-sync-${stamp}.json`;
+  const entered = prompt("Export sync file name", fallback);
+  if (entered === null) return null;
+  const cleanName = entered
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/^\.+/, "")
+    .slice(0, 120);
+  if (!cleanName) return fallback;
+  return cleanName.toLowerCase().endsWith(".json") ? cleanName : `${cleanName}.json`;
+}
 async function exportBackup() {
   const payload = {
     exportedAt: nowIso(),
@@ -1095,7 +1128,8 @@ async function exportBackup() {
     folders: state.folders,
     notes: state.notes,
   };
-  const fileName = `diary-sync-${new Date().toISOString().slice(0, 10)}.json`;
+  const fileName = exportFileName();
+  if (!fileName) return;
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
 
   if (navigator.canShare && navigator.share) {
@@ -1328,9 +1362,9 @@ function bindEvents() {
     if (file) insertImage(file);
     event.target.value = "";
   });
-  els.saveNoteButton.addEventListener("click", saveNoteAndReturnToMenu);
+  els.saveNoteButton.addEventListener("click", saveOrRestoreNoteAndReturnToMenu);
   els.deleteNoteButton.addEventListener("click", deleteCurrentNote);
-  els.restoreNoteButton.addEventListener("click", restoreCurrentNote);
+  els.exitAppButton.addEventListener("click", exitApp);
   els.evernoteImportInput.addEventListener("change", (event) => {
     importFiles("evernote", "Evernote", event.target.files);
     event.target.value = "";

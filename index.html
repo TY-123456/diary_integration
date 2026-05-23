@@ -49,13 +49,13 @@
 
         <section class="import-section">
           <div class="section-heading">
-            <span>Import</span>
+            <span>IMPORT</span>
           </div>
-          <label class="secondary-button file-button">
+          <label class="secondary-button file-button provider-import-button">
             Evernote ENEX
             <input id="evernoteImportInput" type="file" accept=".enex,application/xml,text/xml" multiple />
           </label>
-          <label class="secondary-button file-button">
+          <label class="secondary-button file-button provider-import-button">
             Google Keep
             <input id="keepImportInput" type="file" accept=".json,.html,.htm,application/json,text/html" multiple />
           </label>
@@ -65,6 +65,7 @@
             <input id="restoreInput" type="file" accept="application/json" />
           </label>
           <p class="import-status" id="importStatus"></p>
+          <button class="secondary-button exit-button" id="exitAppButton" type="button">Exit</button>
         </section>
       </aside>
 
@@ -72,7 +73,7 @@
         <header class="mobile-topbar">
           <button class="menu-button" id="openSidebar" title="Open navigation" aria-label="Open navigation">Menu</button>
           <span>Diary</span>
-          <button class="new-note-mobile-button" id="mobileNewNote" title="New note" aria-label="New note">+ NOTE</button>
+          <button class="new-note-mobile-button" id="mobileNewNote" title="New note" aria-label="New note">+ Note</button>
         </header>
 
         <section class="note-list-panel">
@@ -83,7 +84,6 @@
             </div>
             <div class="panel-actions">
               <button class="move-note-button" id="moveNoteButton">Move note</button>
-              <button class="move-note-button" id="restoreNoteButton" hidden>Restore</button>
               <button class="collapse-list-button" id="collapseListButton" aria-label="Hide note list">&lt;</button>
             </div>
           </div>
