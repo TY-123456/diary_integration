@@ -1,4 +1,4 @@
-const CACHE_NAME = "diary-integration-v7";
+const CACHE_NAME = "diary-integration-v9";
 const APP_SHELL = [
   "./",
   "./index.html",

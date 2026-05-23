@@ -57,7 +57,6 @@ const els = {
   deleteNoteButton: document.querySelector("#deleteNoteButton"),
   evernoteImportInput: document.querySelector("#evernoteImportInput"),
   keepImportInput: document.querySelector("#keepImportInput"),
-  installAppButton: document.querySelector("#installAppButton"),
   backupButton: document.querySelector("#backupButton"),
   exitAppButton: document.querySelector("#exitAppButton"),
   restoreInput: document.querySelector("#restoreInput"),
@@ -654,13 +653,11 @@ async function exitApp() {
     await saveCurrentNote();
   }
   els.sidebar.classList.remove("open");
-  showImportMessage("Closing app...");
   document.body.classList.add("app-exited");
   els.exitScreen.hidden = false;
   window.open("", "_self");
   window.close();
 }
-
 function runCommand(command) {
   const shouldRestoreFocus = command !== "undo" && command !== "redo";
   if (command === "createLink") {
@@ -1137,18 +1134,6 @@ function exportFileName() {
   if (!cleanName) return fallback;
   return cleanName.toLowerCase().endsWith(".json") ? cleanName : `${cleanName}.json`;
 }
-async function installApp() {
-  if (!state.deferredInstallPrompt) {
-    showImportMessage("Install app is not available yet. Open this page from the GitHub Pages URL in Chrome, then wait a few seconds and try again.");
-    return;
-  }
-  const promptEvent = state.deferredInstallPrompt;
-  state.deferredInstallPrompt = null;
-  els.installAppButton.disabled = true;
-  await promptEvent.prompt();
-  const result = await promptEvent.userChoice;
-  showImportMessage(result.outcome === "accepted" ? "Install started." : "Install canceled.");
-}
 async function exportBackup() {
   const payload = {
     exportedAt: nowIso(),
@@ -1403,19 +1388,6 @@ function bindEvents() {
   els.keepImportInput.addEventListener("change", (event) => {
     importFiles("google_keep", "Google Keep", event.target.files);
     event.target.value = "";
-  });
-  els.installAppButton.addEventListener("click", installApp);
-  els.installAppButton.disabled = true;
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    state.deferredInstallPrompt = event;
-    els.installAppButton.disabled = false;
-    showImportMessage("Install app is ready.");
-  });
-  window.addEventListener("appinstalled", () => {
-    state.deferredInstallPrompt = null;
-    els.installAppButton.disabled = true;
-    showImportMessage("App installed.");
   });
   els.backupButton.addEventListener("click", exportBackup);
   els.restoreInput.addEventListener("change", (event) => {
