@@ -264,18 +264,18 @@ button:disabled {
 .collapse-list-button {
   position: absolute;
   top: 50%;
-  right: -14px;
+  left: -1px;
   z-index: 4;
-  min-width: 28px;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  border-radius: 6px;
+  min-width: 24px;
+  width: 24px;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 0 8px 8px 0;
   padding: 0;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   transform: translateY(-50%);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
 }
 
 .note-list {
@@ -707,22 +707,6 @@ button:disabled {
     width: 100%;
     padding: 0 8px;
     font-size: 13px;
-  }
-
-  .collapse-list-button {
-    top: auto;
-    right: 6px;
-    bottom: 12px;
-    transform: none;
-  }
-
-  .note-list-collapsed .collapse-list-button {
-    right: 3px;
-    bottom: 12px;
-  }
-
-  .body-editor {
-    padding-left: 10px;
   }
 
   .note-list {

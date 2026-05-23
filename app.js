@@ -652,11 +652,10 @@ async function exitApp() {
     await saveCurrentNote();
   }
   els.sidebar.classList.remove("open");
-  document.body.classList.add("app-exited");
-  els.exitScreen.hidden = false;
   window.open("", "_self");
   window.close();
 }
+
 function runCommand(command) {
   const shouldRestoreFocus = command !== "undo" && command !== "redo";
   if (command === "createLink") {
@@ -668,6 +667,8 @@ function runCommand(command) {
   }
   if (shouldRestoreFocus) {
     els.bodyEditor.focus();
+  } else {
+    els.bodyEditor.blur();
   }
   scheduleNoteSave();
 }
