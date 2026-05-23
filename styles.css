@@ -256,6 +256,11 @@ button:disabled {
   white-space: nowrap;
 }
 
+.panel-actions .danger-button {
+  border-color: #5f3030;
+  color: #ffcfbf;
+}
+
 .collapse-list-button {
   position: absolute;
   top: 50%;
@@ -432,6 +437,31 @@ button:disabled {
 .note-list-collapsed .note-list,
 .note-list-collapsed .move-note-button {
   display: none;
+}
+
+.exit-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.exit-screen h1 {
+  margin: 0 0 10px;
+}
+
+.exit-screen p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.app-exited .app-shell,
+.app-exited dialog {
+  display: none !important;
 }
 
 .empty-state {
@@ -679,6 +709,22 @@ button:disabled {
     font-size: 13px;
   }
 
+  .collapse-list-button {
+    top: auto;
+    right: 6px;
+    bottom: 12px;
+    transform: none;
+  }
+
+  .note-list-collapsed .collapse-list-button {
+    right: 3px;
+    bottom: 12px;
+  }
+
+  .body-editor {
+    padding-left: 10px;
+  }
+
   .note-list {
     padding: 8px 6px;
   }
@@ -773,5 +819,9 @@ button:disabled {
 
   .move-note-button {
     max-width: 122px;
+  }
+
+  .panel-actions {
+    width: 100%;
   }
 }

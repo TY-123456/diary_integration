@@ -27,6 +27,7 @@ const els = {
   trashButton: document.querySelector("#trashButton"),
   trashCount: document.querySelector("#trashCount"),
   moveNoteButton: document.querySelector("#moveNoteButton"),
+  deleteAllTrashButton: document.querySelector("#deleteAllTrashButton"),
   collapseListButton: document.querySelector("#collapseListButton"),
   showListButton: document.querySelector("#showListButton"),
   moveDialog: document.querySelector("#moveDialog"),
@@ -39,6 +40,7 @@ const els = {
   noteList: document.querySelector("#noteList"),
   emptyState: document.querySelector("#emptyState"),
   editorCard: document.querySelector("#editorCard"),
+  exitScreen: document.querySelector("#exitScreen"),
   createdAtLabel: document.querySelector("#createdAtLabel"),
   updatedAtLabel: document.querySelector("#updatedAtLabel"),
   titleInput: document.querySelector("#titleInput"),
@@ -273,6 +275,8 @@ function renderMoveButton() {
   const note = activeNote();
   const inTrash = state.activeFolderId === TRASH_FOLDER_ID;
   els.moveNoteButton.hidden = inTrash;
+  els.deleteAllTrashButton.hidden = !inTrash;
+  els.deleteAllTrashButton.disabled = !state.notes.some((item) => item.deletedAt);
   els.moveNoteButton.disabled = !note || state.folders.length < 2;
 
   const hasActiveFolder = Boolean(activeFolder()) && !inTrash;
@@ -558,6 +562,20 @@ async function deleteCurrentNote() {
   await loadState();
 }
 
+async function deleteAllTrashNotes() {
+  const trashedNotes = state.notes.filter((note) => note.deletedAt);
+  if (!trashedNotes.length) return;
+  const ok = await confirmAction({
+    title: "Delete all trash",
+    message: `Permanently delete ${trashedNotes.length} trashed note(s)? This cannot be recovered.`,
+    actionLabel: "Delete All",
+  });
+  if (!ok) return;
+  await Promise.all(trashedNotes.map((note) => remove("notes", note.id)));
+  state.activeNoteId = null;
+  await loadState();
+}
+
 async function restoreCurrentNote() {
   const note = activeNote();
   if (!note?.deletedAt) return;
@@ -635,12 +653,10 @@ async function exitApp() {
   }
   els.sidebar.classList.remove("open");
   showImportMessage("Closing app...");
+  document.body.classList.add("app-exited");
+  els.exitScreen.hidden = false;
+  window.open("", "_self");
   window.close();
-  window.setTimeout(() => {
-    if (document.visibilityState === "visible") {
-      window.location.href = "about:blank";
-    }
-  }, 250);
 }
 
 function runCommand(command) {
@@ -1337,6 +1353,7 @@ function bindEvents() {
     render();
   });
   els.moveNoteButton.addEventListener("click", openMoveDialog);
+  els.deleteAllTrashButton.addEventListener("click", deleteAllTrashNotes);
   els.moveForm.addEventListener("submit", submitMoveDialog);
   els.closeMoveDialog.addEventListener("click", (event) => {
     event.preventDefault();
