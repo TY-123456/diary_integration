@@ -199,6 +199,10 @@ button:disabled {
   cursor: pointer;
 }
 
+.install-button {
+  border-color: var(--accent);
+}
+
 .exit-button {
   border-color: #5f3030;
   color: #ffcfbf;

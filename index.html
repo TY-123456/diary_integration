@@ -9,9 +9,9 @@
     <meta name="apple-mobile-web-app-title" content="Diary" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Diary Integration</title>
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -59,6 +59,7 @@
             Google Keep
             <input id="keepImportInput" type="file" accept=".json,.html,.htm,application/json,text/html" multiple />
           </label>
+          <button class="secondary-button install-button" id="installAppButton" type="button">Install app</button>
           <button class="secondary-button" id="backupButton">Export sync file</button>
           <label class="secondary-button file-button">
             Import sync file
