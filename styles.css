@@ -264,12 +264,12 @@ button:disabled {
 .collapse-list-button {
   position: absolute;
   top: 50%;
-  right: -22px;
+  right: -20px;
   z-index: 4;
-  min-width: 22px;
-  width: 22px;
-  height: 46px;
-  min-height: 46px;
+  min-width: 20px;
+  width: 20px;
+  height: 44px;
+  min-height: 44px;
   border-left: 0;
   border-radius: 0 8px 8px 0;
   padding: 0;
@@ -420,7 +420,7 @@ button:disabled {
 }
 
 .note-list-collapsed .workspace {
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
 }
 
 .note-list-collapsed .note-list-panel {
@@ -481,6 +481,7 @@ button:disabled {
   min-height: 330px;
   padding: 22px 0 90px;
   color: var(--text);
+  font-size: 18px;
   line-height: 1.7;
   outline: none;
 }
@@ -604,22 +605,26 @@ button:disabled {
 .image-icon-button::before {
   content: "";
   position: absolute;
-  inset: 9px 8px;
+  left: 8px;
+  top: 8px;
+  width: 22px;
+  height: 18px;
   border: 2px solid currentColor;
-  border-radius: 3px;
+  border-radius: 1px;
+  background:
+    radial-gradient(circle at 17px 4px, var(--accent-2) 0 2px, transparent 3px),
+    linear-gradient(135deg, transparent 0 49%, #7ec8f5 50% 100%);
 }
 
 .image-icon-button::after {
   content: "";
   position: absolute;
-  left: 16px;
-  bottom: 10px;
-  width: 12px;
-  height: 9px;
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg);
-  transform-origin: center;
+  left: 10px;
+  top: 16px;
+  width: 18px;
+  height: 10px;
+  background: #7ec8f5;
+  clip-path: polygon(0 100%, 38% 38%, 58% 62%, 78% 18%, 100% 100%);
 }
 
 .history-button {
@@ -766,10 +771,16 @@ button:disabled {
     padding: 12px 10px;
   }
 
-  .editor-meta,
-  .title-input,
-  .body-editor {
-    margin-left: 30px;
+  .note-list-collapsed .editor-meta {
+    padding-left: 28px;
+  }
+
+  .note-list-collapsed .title-input {
+    padding-left: 28px;
+  }
+
+  .note-list-collapsed .body-editor {
+    padding-left: 28px;
   }
 
   .title-input {

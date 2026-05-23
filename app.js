@@ -651,7 +651,20 @@ async function exitApp() {
     await saveCurrentNote();
   }
   els.sidebar.classList.remove("open");
+  els.bodyEditor.blur();
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
   window.close();
+  setTimeout(() => {
+    window.open("", "_self");
+    window.close();
+  }, 50);
+  setTimeout(() => {
+    if (document.visibilityState === "visible" && history.length > 1) {
+      history.back();
+    }
+  }, 160);
 }
 
 function runCommand(command) {
@@ -1349,6 +1362,7 @@ function bindEvents() {
     const button = event.target.closest("[data-folder-id]");
     if (!button) return;
     state.activeFolderId = button.dataset.folderId;
+    state.activeNoteId = filteredNotes()[0]?.id || null;
     els.sidebar.classList.remove("open");
     enterContentState();
     render();
