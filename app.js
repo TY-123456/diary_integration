@@ -56,7 +56,6 @@ const els = {
   evernoteImportInput: document.querySelector("#evernoteImportInput"),
   keepImportInput: document.querySelector("#keepImportInput"),
   backupButton: document.querySelector("#backupButton"),
-  exitAppButton: document.querySelector("#exitAppButton"),
   restoreInput: document.querySelector("#restoreInput"),
   importStatus: document.querySelector("#importStatus"),
   folderDialog: document.querySelector("#folderDialog"),
@@ -644,27 +643,6 @@ async function saveOrRestoreNoteAndReturnToMenu() {
   }
   await saveCurrentNote();
   returnToMenuOnMobile();
-}
-
-async function exitApp() {
-  if (activeNote() && !activeNote().deletedAt) {
-    await saveCurrentNote();
-  }
-  els.sidebar.classList.remove("open");
-  els.bodyEditor.blur();
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
-  window.close();
-  setTimeout(() => {
-    window.open("", "_self");
-    window.close();
-  }, 50);
-  setTimeout(() => {
-    if (document.visibilityState === "visible" && history.length > 1) {
-      history.back();
-    }
-  }, 160);
 }
 
 function runCommand(command) {
@@ -1403,7 +1381,6 @@ function bindEvents() {
   });
   els.saveNoteButton.addEventListener("click", saveOrRestoreNoteAndReturnToMenu);
   els.deleteNoteButton.addEventListener("click", deleteCurrentNote);
-  els.exitAppButton.addEventListener("click", exitApp);
   els.evernoteImportInput.addEventListener("change", (event) => {
     importFiles("evernote", "Evernote", event.target.files);
     event.target.value = "";

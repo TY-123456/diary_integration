@@ -199,11 +199,6 @@ button:disabled {
   cursor: pointer;
 }
 
-.exit-button {
-  border-color: #5f3030;
-  color: #ffcfbf;
-}
-
 .file-button input,
 #imageInput {
   display: none;
@@ -547,25 +542,73 @@ button:disabled {
 
 .bottom-toolbar button,
 .bottom-toolbar select,
-.bottom-toolbar input[type="color"] {
+.bottom-toolbar input[type="color"],
+.font-size-control {
   min-width: 36px;
   min-height: 34px;
   border-radius: 8px;
   padding: 0 10px;
 }
 
-.bottom-toolbar select {
-  padding: 0 6px;
-}
-
 .bottom-toolbar input[type="color"] {
-  padding: 4px;
+  width: 36px;
+  padding: 5px;
 }
 
 .image-icon-button {
   position: relative;
   width: 38px;
   padding: 0;
+}
+
+.font-size-control {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.font-size-control:hover {
+  border-color: var(--accent);
+}
+
+.font-size-control span {
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.font-size-control::before,
+.font-size-control::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+}
+
+.font-size-control::before {
+  top: 9px;
+  border-bottom: 4px solid currentColor;
+}
+
+.font-size-control::after {
+  bottom: 9px;
+  border-top: 4px solid currentColor;
+}
+
+.font-size-control select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .list-icon-button {
@@ -797,7 +840,7 @@ button:disabled {
   .bottom-toolbar [data-command="italic"],
   .bottom-toolbar [data-command="underline"],
   .bottom-toolbar [data-command="cycleList"],
-  .bottom-toolbar #fontSizeSelect,
+  .bottom-toolbar .font-size-control,
   .bottom-toolbar #fontColorInput,
   .bottom-toolbar #imageButton {
     min-width: 36px;
