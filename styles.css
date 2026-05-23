@@ -264,15 +264,16 @@ button:disabled {
 .collapse-list-button {
   position: absolute;
   top: 50%;
-  left: -1px;
+  right: -22px;
   z-index: 4;
-  min-width: 24px;
-  width: 24px;
+  min-width: 22px;
+  width: 22px;
   height: 46px;
   min-height: 46px;
+  border-left: 0;
   border-radius: 0 8px 8px 0;
   padding: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   transform: translateY(-50%);
   box-shadow: none;
@@ -439,31 +440,6 @@ button:disabled {
   display: none;
 }
 
-.exit-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: var(--bg);
-  text-align: center;
-}
-
-.exit-screen h1 {
-  margin: 0 0 10px;
-}
-
-.exit-screen p {
-  margin: 0;
-  color: var(--muted);
-}
-
-.app-exited .app-shell,
-.app-exited dialog {
-  display: none !important;
-}
-
 .empty-state {
   display: grid;
   min-height: 100%;
@@ -548,7 +524,7 @@ button:disabled {
 .bottom-toolbar {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   width: fit-content;
   max-width: 100%;
@@ -571,17 +547,79 @@ button:disabled {
 .bottom-toolbar button,
 .bottom-toolbar select,
 .bottom-toolbar input[type="color"] {
-  min-width: 42px;
-  min-height: 38px;
+  min-width: 36px;
+  min-height: 34px;
   border-radius: 8px;
+  padding: 0 10px;
 }
 
 .bottom-toolbar select {
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
 .bottom-toolbar input[type="color"] {
   padding: 4px;
+}
+
+.image-icon-button {
+  position: relative;
+  width: 38px;
+  padding: 0;
+}
+
+.list-icon-button {
+  position: relative;
+  width: 38px;
+  padding: 0;
+}
+
+.list-icon-button::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 8px 0 currentColor,
+    0 16px 0 currentColor;
+}
+
+.list-icon-button::after {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 10px;
+  width: 13px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow:
+    0 8px 0 currentColor,
+    0 16px 0 currentColor;
+}
+
+.image-icon-button::before {
+  content: "";
+  position: absolute;
+  inset: 9px 8px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.image-icon-button::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  bottom: 10px;
+  width: 12px;
+  height: 9px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transform-origin: center;
 }
 
 .history-button {
@@ -589,7 +627,7 @@ button:disabled {
 }
 
 .history-button::before {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -728,6 +766,12 @@ button:disabled {
     padding: 12px 10px;
   }
 
+  .editor-meta,
+  .title-input,
+  .body-editor {
+    margin-left: 30px;
+  }
+
   .title-input {
     min-height: 44px;
     font-size: 22px;
@@ -741,13 +785,11 @@ button:disabled {
   .bottom-toolbar [data-command="bold"],
   .bottom-toolbar [data-command="italic"],
   .bottom-toolbar [data-command="underline"],
-  .bottom-toolbar [data-command="insertUnorderedList"],
-  .bottom-toolbar [data-command="insertOrderedList"],
-  .bottom-toolbar [data-command="createLink"],
+  .bottom-toolbar [data-command="cycleList"],
   .bottom-toolbar #fontSizeSelect,
   .bottom-toolbar #fontColorInput,
   .bottom-toolbar #imageButton {
-    min-width: 42px;
+    min-width: 36px;
   }
 
   .bottom-toolbar {
@@ -761,7 +803,7 @@ button:disabled {
     order: 2;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
   }
 
@@ -776,10 +818,10 @@ button:disabled {
   }
 
   .bottom-toolbar #deleteNoteButton {
-    min-width: 58px;
+    min-width: 54px;
     max-width: 88px;
     overflow-wrap: anywhere;
-    padding: 0 8px;
+    padding: 0 7px;
     font-size: 12px;
   }
 }

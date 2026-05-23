@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diary Mobile Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #11110f;
+        --panel: #1f1e1a;
+        --line: #36342d;
+        --text: #f5efe4;
+        --muted: #b8ad9f;
+        --accent: #7cc6c7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: #0f100e;
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .preview-shell {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .preview-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(31, 30, 26, 0.96);
+        padding: 10px;
+      }
+
+      .preview-toolbar button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #292720;
+        color: var(--text);
+        padding: 0 12px;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .preview-toolbar button:hover,
+      .preview-toolbar button.active {
+        border-color: var(--accent);
+        color: #ffffff;
+      }
+
+      .preview-stage {
+        display: grid;
+        min-height: 0;
+        place-items: center;
+        overflow: auto;
+        padding: 24px;
+      }
+
+      .phone {
+        width: min(var(--phone-width), calc(100vw - 48px));
+        height: min(var(--phone-height), calc(100vh - 106px));
+        min-width: 280px;
+        min-height: 520px;
+        border: 10px solid #1b1a17;
+        border-radius: 32px;
+        background: #050505;
+        box-shadow:
+          0 24px 80px rgba(0, 0, 0, 0.48),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .phone iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: var(--bg);
+      }
+
+      body[data-size="compact"] {
+        --phone-width: 360px;
+        --phone-height: 720px;
+      }
+
+      body[data-size="pixel"] {
+        --phone-width: 390px;
+        --phone-height: 844px;
+      }
+
+      body[data-size="large"] {
+        --phone-width: 430px;
+        --phone-height: 932px;
+      }
+
+      body[data-orientation="landscape"] {
+        --phone-width: 844px;
+        --phone-height: 390px;
+      }
+
+      @media (max-width: 520px) {
+        .preview-stage {
+          padding: 10px;
+        }
+
+        .phone {
+          width: calc(100vw - 20px);
+          height: calc(100vh - 92px);
+          border-width: 6px;
+          border-radius: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body data-size="compact" data-orientation="portrait">
+    <main class="preview-shell">
+      <div class="preview-toolbar" aria-label="Mobile preview controls">
+        <button class="active" type="button" data-size="compact">360 x 720</button>
+        <button type="button" data-size="pixel">390 x 844</button>
+        <button type="button" data-size="large">430 x 932</button>
+        <button type="button" data-orientation="portrait">Portrait</button>
+        <button type="button" data-orientation="landscape">Landscape</button>
+        <button type="button" id="reloadPreview">Reload</button>
+      </div>
+      <div class="preview-stage">
+        <div class="phone" aria-label="Mobile app preview">
+          <iframe id="appPreview" src="./index.html" title="Diary mobile preview"></iframe>
+        </div>
+      </div>
+    </main>
+    <script>
+      const body = document.body;
+      const preview = document.querySelector("#appPreview");
+      const controls = document.querySelectorAll(".preview-toolbar button");
+
+      function setActive(selector, value) {
+        controls.forEach((button) => {
+          if (button.dataset[selector] !== undefined) {
+            button.classList.toggle("active", button.dataset[selector] === value);
+          }
+        });
+      }
+
+      document.querySelector(".preview-toolbar").addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        if (button.dataset.size) {
+          body.dataset.size = button.dataset.size;
+          if (body.dataset.orientation !== "landscape") {
+            setActive("size", button.dataset.size);
+          }
+        }
+        if (button.dataset.orientation) {
+          body.dataset.orientation = button.dataset.orientation;
+          setActive("orientation", button.dataset.orientation);
+          setActive("size", body.dataset.size);
+        }
+        if (button.id === "reloadPreview") {
+          preview.contentWindow.location.reload();
+        }
+      });
+    </script>
+  </body>
+</html>

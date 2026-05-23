@@ -40,7 +40,6 @@ const els = {
   noteList: document.querySelector("#noteList"),
   emptyState: document.querySelector("#emptyState"),
   editorCard: document.querySelector("#editorCard"),
-  exitScreen: document.querySelector("#exitScreen"),
   createdAtLabel: document.querySelector("#createdAtLabel"),
   updatedAtLabel: document.querySelector("#updatedAtLabel"),
   titleInput: document.querySelector("#titleInput"),
@@ -652,13 +651,23 @@ async function exitApp() {
     await saveCurrentNote();
   }
   els.sidebar.classList.remove("open");
-  window.open("", "_self");
   window.close();
 }
 
 function runCommand(command) {
   const shouldRestoreFocus = command !== "undo" && command !== "redo";
-  if (command === "createLink") {
+  if (command === "cycleList") {
+    const isBulletList = document.queryCommandState("insertUnorderedList");
+    const isNumberedList = document.queryCommandState("insertOrderedList");
+    if (isNumberedList) {
+      document.execCommand("insertOrderedList", false, null);
+    } else if (isBulletList) {
+      document.execCommand("insertUnorderedList", false, null);
+      document.execCommand("insertOrderedList", false, null);
+    } else {
+      document.execCommand("insertUnorderedList", false, null);
+    }
+  } else if (command === "createLink") {
     const url = prompt("Link URL");
     if (!url) return;
     document.execCommand(command, false, url);
@@ -1361,7 +1370,7 @@ function bindEvents() {
   els.titleInput.addEventListener("input", scheduleNoteSave);
   els.bodyEditor.addEventListener("input", scheduleNoteSave);
   document.querySelector(".bottom-toolbar").addEventListener("pointerdown", (event) => {
-    if (event.target.closest("[data-command], #saveNoteButton, #deleteNoteButton, #toolbarToggleButton")) {
+    if (event.target.closest("[data-command], #saveNoteButton, #deleteNoteButton, #toolbarToggleButton, #imageButton")) {
       event.preventDefault();
     }
   });

@@ -110,22 +110,20 @@
               <button class="toolbar-toggle" id="toolbarToggleButton" aria-label="Show editor tools" title="Show editor tools">^</button>
               <div class="bottom-toolbar" id="bottomToolbar" role="toolbar" aria-label="Editor toolbar">
                 <div class="optional-tools" id="optionalTools">
-                  <button data-command="bold" title="Bold"><strong>B</strong></button>
-                  <button data-command="italic" title="Italic"><em>I</em></button>
-                  <button data-command="underline" title="Underline"><u>U</u></button>
-                  <button data-command="insertUnorderedList" title="Bullet list">Bullets</button>
-                  <button data-command="insertOrderedList" title="Numbered list">1.</button>
-                  <button data-command="createLink" title="Insert link">Link</button>
-                  <select id="fontSizeSelect" title="Font size">
-                    <option value="">Size</option>
-                    <option value="2">Small</option>
-                    <option value="3">Normal</option>
-                    <option value="5">Large</option>
-                    <option value="7">Huge</option>
-                  </select>
-                  <input id="fontColorInput" type="color" title="Font color" value="#f6f1e8" />
-                  <button id="imageButton" title="Insert image">Image</button>
-                </div>
+                    <button data-command="bold" title="Bold"><strong>B</strong></button>
+                    <button data-command="italic" title="Italic"><em>I</em></button>
+                    <button data-command="underline" title="Underline"><u>U</u></button>
+                    <button class="list-icon-button" data-command="cycleList" title="List style" aria-label="List style"></button>
+                    <select id="fontSizeSelect" title="Font size">
+                      <option value="">Size</option>
+                      <option value="2">Small</option>
+                      <option value="3">Normal</option>
+                      <option value="5">Large</option>
+                      <option value="7">Huge</option>
+                    </select>
+                    <input id="fontColorInput" type="color" title="Font color" value="#f6f1e8" />
+                    <button id="imageButton" class="image-icon-button" title="Insert image" aria-label="Insert image"></button>
+                  </div>
                 <input id="imageInput" type="file" accept="image/*" />
                 <button data-command="undo" class="history-button undo-button" title="Undo" aria-label="Undo"></button>
                 <button data-command="redo" class="history-button redo-button" title="Redo" aria-label="Redo"></button>
@@ -137,13 +135,6 @@
         </section>
       </main>
     </div>
-
-    <section class="exit-screen" id="exitScreen" hidden>
-      <div>
-        <h1>Diary closed</h1>
-        <p>You can return to your home screen now.</p>
-      </div>
-    </section>
 
     <dialog class="move-dialog" id="moveDialog">
       <form method="dialog" class="move-form" id="moveForm">
