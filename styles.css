@@ -170,16 +170,66 @@ button:disabled {
 }
 
 .folder-button {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 34px;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   text-align: left;
+}
+
+.folder-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-count {
+  color: var(--muted);
 }
 
 .folder-button.active {
   border-color: var(--accent-2);
   background: #2b2619;
+}
+
+.folder-button.dragging {
+  border-color: var(--accent);
+  opacity: 0.72;
+}
+
+.folder-button.drag-over {
+  background: #243032;
+}
+
+.folder-drag-handle {
+  display: inline-grid;
+  place-content: center;
+  gap: 4px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.folder-drag-handle:active {
+  cursor: grabbing;
+}
+
+.folder-drag-handle span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.folder-drag-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .trash-button {
@@ -824,6 +874,18 @@ button:disabled {
 
   .note-list-collapsed .body-editor {
     padding-left: 28px;
+  }
+
+  .editor-focus-mode .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-focus-mode .note-list-panel {
+    display: none;
+  }
+
+  .editor-focus-mode .editor-panel {
+    grid-column: 1;
   }
 
   .title-input {

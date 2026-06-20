@@ -9,6 +9,9 @@ const state = {
   notes: [],
   activeFolderId: null,
   activeNoteId: null,
+  uiMode: "noteList",
+  draggingFolderId: null,
+  dragOverFolderId: null,
   search: "",
   saveTimer: null,
   pendingConfirmAction: null,
@@ -113,6 +116,33 @@ function compareNotesByCreatedDesc(a, b) {
   return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 }
 
+function compareFoldersBySortOrder(a, b) {
+  const aOrder = Number.isFinite(a.sortOrder) ? a.sortOrder : Number.POSITIVE_INFINITY;
+  const bOrder = Number.isFinite(b.sortOrder) ? b.sortOrder : Number.POSITIVE_INFINITY;
+  if (aOrder !== bOrder) return aOrder - bOrder;
+  return a.name.localeCompare(b.name);
+}
+
+function normalizeFolderOrder(folders) {
+  return [...folders]
+    .sort(compareFoldersBySortOrder)
+    .map((folder, index) => ({
+      ...folder,
+      sortOrder: index,
+    }));
+}
+
+async function persistNormalizedFolderOrder(folders) {
+  for (const [index, folder] of folders.entries()) {
+    await put("folders", { ...folder, sortOrder: index });
+  }
+}
+
+function nextFolderSortOrder() {
+  if (!state.folders.length) return 0;
+  return Math.max(...state.folders.map((folder) => (Number.isFinite(folder.sortOrder) ? folder.sortOrder : 0))) + 1;
+}
+
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -196,7 +226,7 @@ async function removeOrphanNotes() {
 }
 
 async function loadState() {
-  state.folders = (await getAll("folders")).sort((a, b) => a.name.localeCompare(b.name));
+  state.folders = normalizeFolderOrder(await getAll("folders"));
   state.notes = (await getAll("notes")).map(repairDisplayNote).sort(compareNotesByCreatedDesc);
   if (state.activeFolderId !== TRASH_FOLDER_ID && !state.folders.some((folder) => folder.id === state.activeFolderId)) {
     state.activeFolderId = state.folders[0]?.id || null;
@@ -256,12 +286,30 @@ function render() {
   renderMoveButton();
   renderNotes();
   renderEditor();
+  renderUiMode();
 }
 
 function renderFolders() {
   const buttons = state.folders.map((folder) => {
       const count = state.notes.filter((note) => note.folderId === folder.id && !note.deletedAt).length;
-      return `<button class="folder-button ${state.activeFolderId === folder.id ? "active" : ""}" data-folder-id="${folder.id}"><span>${escapeHtml(folder.name)}</span><span>${count}</span></button>`;
+      const classes = [
+        "folder-button",
+        state.activeFolderId === folder.id ? "active" : "",
+        state.draggingFolderId === folder.id ? "dragging" : "",
+        state.dragOverFolderId === folder.id ? "drag-over" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `
+        <button class="${classes}" data-folder-id="${folder.id}">
+          <span class="folder-name">${escapeHtml(folder.name)}</span>
+          <span class="folder-count">${count}</span>
+          <span class="folder-drag-handle" data-drag-folder-id="${folder.id}" aria-label="Reorder ${escapeHtml(folder.name)}">
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+      `;
     });
   els.folderList.innerHTML = buttons.join("");
   const trashCount = state.notes.filter((note) => note.deletedAt).length;
@@ -360,6 +408,7 @@ async function saveFolderFromDialog(event) {
       updatedAt: timestamp,
       source: "native",
       sourceId: null,
+      sortOrder: nextFolderSortOrder(),
     };
     await put("folders", folder);
   }
@@ -389,6 +438,7 @@ async function ensureStandaloneFolder(name) {
     updatedAt: timestamp,
     source: "native",
     sourceId: null,
+    sortOrder: nextFolderSortOrder(),
   };
   await put("folders", folder);
   return folder;
@@ -424,6 +474,7 @@ async function deleteActiveFolder() {
   await remove("folders", folder.id);
   state.activeFolderId = state.folders.find((item) => item.id !== folder.id)?.id || null;
   state.activeNoteId = null;
+  exitEditorFocusMode();
   await loadState();
 }
 
@@ -461,6 +512,7 @@ async function createNote() {
   els.sidebar.classList.remove("open");
   enterContentState();
   await loadState();
+  enterEditorFocusMode();
   els.titleInput.focus();
 }
 
@@ -493,6 +545,7 @@ async function moveCurrentNote(folderId) {
   if (!note || note.deletedAt || !state.folders.some((folder) => folder.id === folderId)) return;
   await put("notes", { ...note, folderId, updatedAt: nowIso() });
   state.activeFolderId = folderId;
+  exitEditorFocusMode();
   await loadState();
 }
 
@@ -538,6 +591,7 @@ async function deleteCurrentNote() {
     await remove("notes", note.id);
     const nextNote = filteredNotes().find((item) => item.id !== note.id);
     state.activeNoteId = nextNote?.id || null;
+    exitEditorFocusMode();
     await loadState();
     return;
   }
@@ -557,6 +611,7 @@ async function deleteCurrentNote() {
   });
   const nextNote = filteredNotes().find((item) => item.id !== note.id);
   state.activeNoteId = nextNote?.id || null;
+  exitEditorFocusMode();
   await loadState();
 }
 
@@ -571,6 +626,7 @@ async function deleteAllTrashNotes() {
   if (!ok) return;
   await Promise.all(trashedNotes.map((note) => remove("notes", note.id)));
   state.activeNoteId = null;
+  exitEditorFocusMode();
   await loadState();
 }
 
@@ -592,12 +648,85 @@ async function restoreCurrentNote() {
   });
   state.activeFolderId = folderId;
   state.activeNoteId = note.id;
+  exitEditorFocusMode();
   await loadState();
 }
 
 function closeMoveDialog() {
   els.moveDialog.close();
+  exitEditorFocusMode();
   toggleNoteList(true);
+}
+
+async function reorderFolders(sourceId, targetId) {
+  if (!sourceId || !targetId || sourceId === targetId) return;
+  const folders = [...state.folders];
+  const fromIndex = folders.findIndex((folder) => folder.id === sourceId);
+  const toIndex = folders.findIndex((folder) => folder.id === targetId);
+  if (fromIndex < 0 || toIndex < 0) return;
+
+  const [movedFolder] = folders.splice(fromIndex, 1);
+  folders.splice(toIndex, 0, movedFolder);
+  const orderedFolders = folders.map((folder, index) => ({ ...folder, sortOrder: index }));
+  state.folders = orderedFolders;
+  state.draggingFolderId = null;
+  state.dragOverFolderId = null;
+  renderFolders();
+  renderMoveButton();
+  await persistNormalizedFolderOrder(orderedFolders);
+}
+
+function setDragOverFolder(folderId) {
+  if (state.dragOverFolderId === folderId) return;
+  state.dragOverFolderId = folderId;
+  renderFolders();
+}
+
+async function finishFolderDrag(targetId) {
+  const sourceId = state.draggingFolderId;
+  state.draggingFolderId = null;
+  state.dragOverFolderId = null;
+  if (!sourceId || !targetId || sourceId === targetId) {
+    renderFolders();
+    return;
+  }
+  await reorderFolders(sourceId, targetId);
+}
+
+function beginFolderDrag(event) {
+  const handle = event.target.closest("[data-drag-folder-id]");
+  if (!handle) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  handle.setPointerCapture?.(event.pointerId);
+  state.draggingFolderId = handle.dataset.dragFolderId;
+  state.dragOverFolderId = state.draggingFolderId;
+  renderFolders();
+
+  const move = (moveEvent) => {
+    const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest("[data-folder-id]");
+    if (target) setDragOverFolder(target.dataset.folderId);
+  };
+  const up = async (upEvent) => {
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", cancel);
+    const target = document.elementFromPoint(upEvent.clientX, upEvent.clientY)?.closest("[data-folder-id]");
+    await finishFolderDrag(target?.dataset.folderId || state.dragOverFolderId);
+  };
+  const cancel = () => {
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", cancel);
+    state.draggingFolderId = null;
+    state.dragOverFolderId = null;
+    renderFolders();
+  };
+
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", up);
+  document.addEventListener("pointercancel", cancel);
 }
 
 function confirmAction({ title, message, actionLabel }) {
@@ -633,6 +762,25 @@ function toggleNoteList(show) {
   els.collapseListButton.textContent = show ? "<" : ">";
   els.collapseListButton.setAttribute("aria-label", show ? "Hide note list" : "Show note list");
   els.showListButton.hidden = true;
+}
+
+function renderUiMode() {
+  document.body.classList.toggle("editor-focus-mode", isMobileLayout() && state.uiMode === "editorFocus");
+}
+
+function exitEditorFocusMode() {
+  state.uiMode = "noteList";
+  renderUiMode();
+}
+
+function enterEditorFocusMode() {
+  if (!isMobileLayout() || !activeNote()) return;
+  enterContentState();
+  state.uiMode = "editorFocus";
+  renderUiMode();
+  if (history.state?.diaryView !== "editorFocus") {
+    history.pushState({ diaryView: "editorFocus" }, "");
+  }
 }
 
 async function saveOrRestoreNoteAndReturnToMenu() {
@@ -702,6 +850,7 @@ function showImportMessage(message) {
 
 function returnToMenuOnMobile() {
   if (window.matchMedia("(max-width: 900px)").matches) {
+    exitEditorFocusMode();
     els.sidebar.classList.add("open");
   }
 }
@@ -711,6 +860,7 @@ function isMobileLayout() {
 }
 
 function openMenu() {
+  exitEditorFocusMode();
   els.sidebar.classList.add("open");
 }
 
@@ -729,6 +879,11 @@ function prepareMobileBackState() {
 
 function handleMobileBack() {
   if (!isMobileLayout()) return;
+  if (state.uiMode === "editorFocus") {
+    exitEditorFocusMode();
+    toggleNoteList(true);
+    return;
+  }
   openMenu();
 }
 
@@ -931,6 +1086,7 @@ async function ensureImportFolder(folderName, provider, folderCache) {
     updatedAt: timestamp,
     source: provider,
     sourceId: cleanName,
+    sortOrder: nextFolderSortOrder(),
   };
   await put("folders", folder);
   folderCache.set(cacheKey, folder);
@@ -1199,8 +1355,8 @@ async function mergeBackupPayload(payload) {
   let notesUpdated = 0;
   let notesSkipped = 0;
 
-  for (const incomingFolder of payload.folders) {
-    const folder = normalizeImportedFolder(incomingFolder);
+  for (const [index, incomingFolder] of payload.folders.entries()) {
+    const folder = normalizeImportedFolder(incomingFolder, index);
     const existing =
       existingFolders.find((item) => item.id === folder.id) ||
       existingFolders.find((item) => item.name.toLowerCase() === folder.name.toLowerCase());
@@ -1208,7 +1364,7 @@ async function mergeBackupPayload(payload) {
     if (existing) {
       folderIdMap.set(folder.id, existing.id);
       const mergedFolder = newestByUpdatedAt(existing, folder);
-      await put("folders", { ...existing, ...mergedFolder, id: existing.id });
+      await put("folders", { ...existing, ...mergedFolder, id: existing.id, sortOrder: folder.sortOrder });
     } else {
       folderIdMap.set(folder.id, folder.id);
       existingFolders.push(folder);
@@ -1249,8 +1405,9 @@ async function mergeBackupPayload(payload) {
   return { notesAdded, notesUpdated, notesSkipped };
 }
 
-function normalizeImportedFolder(folder) {
+function normalizeImportedFolder(folder, fallbackOrder = nextFolderSortOrder()) {
   const timestamp = nowIso();
+  const sortOrder = Number(folder.sortOrder);
   return {
     id: folder.id || uid("folder"),
     name: stripInvisibleText(folder.name) || "Imported",
@@ -1258,6 +1415,7 @@ function normalizeImportedFolder(folder) {
     updatedAt: folder.updatedAt || folder.createdAt || timestamp,
     source: folder.source || "native",
     sourceId: folder.sourceId || null,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : fallbackOrder,
   };
 }
 
@@ -1332,15 +1490,19 @@ function bindEvents() {
   els.trashButton.addEventListener("click", () => {
     state.activeFolderId = TRASH_FOLDER_ID;
     state.activeNoteId = filteredNotes()[0]?.id || null;
+    exitEditorFocusMode();
     els.sidebar.classList.remove("open");
     enterContentState();
     render();
   });
+  els.folderList.addEventListener("pointerdown", beginFolderDrag);
   els.folderList.addEventListener("click", (event) => {
+    if (event.target.closest("[data-drag-folder-id]")) return;
     const button = event.target.closest("[data-folder-id]");
     if (!button) return;
     state.activeFolderId = button.dataset.folderId;
     state.activeNoteId = filteredNotes()[0]?.id || null;
+    exitEditorFocusMode();
     els.sidebar.classList.remove("open");
     enterContentState();
     render();
@@ -1348,7 +1510,12 @@ function bindEvents() {
   els.noteList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-note-id]");
     if (!button) return;
+    if (button.dataset.noteId === state.activeNoteId) {
+      enterEditorFocusMode();
+      return;
+    }
     state.activeNoteId = button.dataset.noteId;
+    exitEditorFocusMode();
     enterContentState();
     render();
   });
@@ -1396,6 +1563,7 @@ function bindEvents() {
     event.target.value = "";
   });
   window.addEventListener("popstate", handleMobileBack);
+  window.addEventListener("resize", renderUiMode);
 }
 
 async function init() {
