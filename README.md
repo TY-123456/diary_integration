@@ -5,8 +5,10 @@
 ## What It Does
 
 - Create, edit, save, delete, restore, and permanently remove notes.
-- Organize notes by folders, including a Trash view.
+- Organize notes by folders, including persisted drag reordering from the right-side folder handle.
+- Recover notes from Trash individually or with Restore all after accidental folder deletion.
 - Edit rich note content with undo, redo, bold, italic, underline, list style, font size, color, and image insertion.
+- Auto-scroll long note editing before the caret reaches the bottom of the screen.
 - Import and export sync data for moving notes between browser/mobile installs.
 - Import Evernote `.enex` and Google Keep Takeout data on the web version.
 - Install as a PWA on Android through Chrome's "Add to Home screen" flow.
@@ -51,6 +53,15 @@ After pushing changes to GitHub Pages:
 
 If Android still shows an older app icon or old UI, remove the old home screen app and install it again. PWA icons and service worker cache can stay cached longer than normal page content.
 
+When testing mobile behavior, check these flows before considering a change done:
+
+- Folder reorder by dragging the two-line handle on the right side of a folder row.
+- Trash action buttons, especially `Restore all` and `Delete all`, on narrow phone screens.
+- Long note typing with the bottom toolbar visible; the editor should scroll while there are still about three lines left.
+- App icon size after reinstalling the PWA.
+
+Any change to the app shell should bump `CACHE_NAME` in `sw.js`; otherwise installed mobile PWAs may keep old `app.js`, `styles.css`, or icon files.
+
 ## GitHub Update Flow
 
 Use the existing repository. Do not create a new repo.
@@ -60,7 +71,7 @@ cd C:\Users\USER\Documents\diary_integration
 git status --short --branch
 git add .
 git commit -m "Describe the change"
-git push
+git push origin main
 ```
 
 The current remote is:

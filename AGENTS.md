@@ -60,6 +60,7 @@ On mobile:
 The left sidebar should feel similar to Codex's chat sidebar:
 
 - Folder list.
+- Folder order must be user-adjustable and persisted. Reordering starts only from the right-side two-line drag handle, not from dragging the whole folder row.
 - Trash button under the folder list.
 - New note button.
 - New folder button.
@@ -80,12 +81,15 @@ Each note editor must include:
 - The editor toolbar must support a Word-like hide/unhide control at the top middle of the toolbar.
 - When editor tools are hidden, Undo, Redo, Save, and Delete must remain visible in the same row.
 - Undo and Redo should use curved arrow icons and should not open the mobile keyboard when tapped.
+- While typing long note content, the editor must auto-scroll before the caret reaches the visible bottom. Keep roughly three lines of breathing room above the sticky toolbar so the user never has to manually scroll down to continue typing.
 
 ### Note List
 
 - The note list window should have a center-edge hide/unhide button.
 - The hide/unhide button icon must reverse direction depending on the current state.
 - The Move note dialog close button must dismiss the dialog and return to the note list.
+- On mobile, the note list column must stay wide enough for Trash actions such as Restore all and Delete all. Do not add fixed button widths that clip action labels.
+- In Trash, include a one-click restore action for all trashed notes in addition to permanent deletion.
 
 Use compact icon buttons where possible. Avoid explanatory text inside the app UI unless it is necessary for an empty state, error, or confirmation dialog.
 
@@ -96,6 +100,7 @@ Use compact icon buttons where possible. Avoid explanatory text inside the app U
 - Avoid a marketing-style landing page. The first screen should be the actual note app.
 - The app should feel like a productivity tool: calm, fast, and focused.
 - Make sure controls are large enough for touch on mobile.
+- PWA icons must leave maskable safe-area padding. Do not let the central diary mark fill the whole icon, and bump the service worker cache whenever icon files change.
 
 ## Data Model
 
@@ -122,6 +127,7 @@ Recommended fields:
 - `importedAt`: timestamp when the note was imported.
 - `deletedAt`: timestamp when the note was moved to Trash, or null when active.
 - `originalFolderId`: folder ID used when restoring a trashed note.
+- `originalFolderName`: folder name captured when a note is trashed, used to rebuild a deleted folder during restore-all flows.
 
 ### Folder
 
@@ -133,6 +139,7 @@ Recommended fields:
 - `updatedAt`: folder modified time.
 - `source`: `native`, `evernote`, or `google_keep` if created during import.
 - `sourceId`: original notebook/folder ID when available.
+- `sortOrder`: persisted folder order used for sidebar display and drag reordering.
 
 ### Attachment
 
@@ -229,8 +236,10 @@ Google Keep does not have the same mature public import API surface as many Goog
 
 - A Trash button must appear under the folder list.
 - Deleting a note moves it to Trash instead of deleting it permanently.
+- Deleting a folder moves its notes to Trash and must preserve enough metadata to restore them later, including the original folder name.
 - Trashed notes should be recoverable to their original folder when possible.
-- If the original folder no longer exists, restore to an existing folder or create a default folder.
+- If the original folder no longer exists, restore should recreate the original folder when the original folder name is known; otherwise restore to a default folder.
+- Trash must provide a Restore all action that restores every trashed note in one step.
 - Permanent deletion should only be available from Trash.
 
 ## Import Conflict Handling
@@ -267,3 +276,5 @@ When importing the same provider note more than once:
 - Preserve source metadata even if the current UI does not show it.
 - Add tests around import timestamp preservation, duplicate import handling, and attachment mapping.
 - Use responsive layout checks before considering UI work complete.
+- After changing `app.js`, `styles.css`, PWA icons, `manifest.json`, or `index.html`, bump `CACHE_NAME` in `sw.js` so installed mobile PWAs fetch the latest app shell.
+- For mobile UI changes, verify narrow viewport behavior around the note list, Trash actions, sticky editor toolbar, browser Back behavior, and installed-PWA cache refresh.
