@@ -41,6 +41,7 @@ const els = {
   activeFolderLabel: document.querySelector("#activeFolderLabel"),
   noteCount: document.querySelector("#noteCount"),
   noteList: document.querySelector("#noteList"),
+  editorPanel: document.querySelector(".editor-panel"),
   emptyState: document.querySelector("#emptyState"),
   editorCard: document.querySelector("#editorCard"),
   createdAtLabel: document.querySelector("#createdAtLabel"),
@@ -521,6 +522,11 @@ function scheduleNoteSave() {
   state.saveTimer = setTimeout(saveCurrentNote, 250);
 }
 
+function handleBodyEditorInput() {
+  scheduleNoteSave();
+  scheduleCaretVisibility();
+}
+
 async function saveCurrentNote() {
   const note = activeNote();
   if (!note || note.deletedAt) return;
@@ -676,10 +682,17 @@ async function reorderFolders(sourceId, targetId) {
   await persistNormalizedFolderOrder(orderedFolders);
 }
 
+function syncFolderDragClasses() {
+  els.folderList.querySelectorAll("[data-folder-id]").forEach((button) => {
+    button.classList.toggle("dragging", button.dataset.folderId === state.draggingFolderId);
+    button.classList.toggle("drag-over", button.dataset.folderId === state.dragOverFolderId);
+  });
+}
+
 function setDragOverFolder(folderId) {
   if (state.dragOverFolderId === folderId) return;
   state.dragOverFolderId = folderId;
-  renderFolders();
+  syncFolderDragClasses();
 }
 
 async function finishFolderDrag(targetId) {
@@ -687,7 +700,7 @@ async function finishFolderDrag(targetId) {
   state.draggingFolderId = null;
   state.dragOverFolderId = null;
   if (!sourceId || !targetId || sourceId === targetId) {
-    renderFolders();
+    syncFolderDragClasses();
     return;
   }
   await reorderFolders(sourceId, targetId);
@@ -702,7 +715,7 @@ function beginFolderDrag(event) {
   handle.setPointerCapture?.(event.pointerId);
   state.draggingFolderId = handle.dataset.dragFolderId;
   state.dragOverFolderId = state.draggingFolderId;
-  renderFolders();
+  syncFolderDragClasses();
 
   const move = (moveEvent) => {
     const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest("[data-folder-id]");
@@ -721,7 +734,7 @@ function beginFolderDrag(event) {
     document.removeEventListener("pointercancel", cancel);
     state.draggingFolderId = null;
     state.dragOverFolderId = null;
-    renderFolders();
+    syncFolderDragClasses();
   };
 
   document.addEventListener("pointermove", move);
@@ -783,6 +796,49 @@ function enterEditorFocusMode() {
   }
 }
 
+function caretRectInBodyEditor() {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !els.bodyEditor.contains(selection.anchorNode)) return null;
+
+  const range = selection.getRangeAt(0).cloneRange();
+  range.collapse(false);
+  const rangeRect = range.getBoundingClientRect();
+  if (rangeRect.width || rangeRect.height) return rangeRect;
+
+  const restoreRange = range.cloneRange();
+  const marker = document.createElement("span");
+  marker.textContent = "\u200b";
+  range.insertNode(marker);
+  const markerRect = marker.getBoundingClientRect();
+  marker.remove();
+  selection.removeAllRanges();
+  selection.addRange(restoreRange);
+  return markerRect;
+}
+
+function keepCaretInEditorView() {
+  if (document.activeElement !== els.bodyEditor) return;
+  const caretRect = caretRectInBodyEditor();
+  if (!caretRect) return;
+
+  const panelRect = els.editorPanel.getBoundingClientRect();
+  const toolbarRect = els.toolbarWrap.getBoundingClientRect();
+  const bottomInset = Math.max(120, toolbarRect.height + 36);
+  const topInset = 24;
+  const visibleTop = panelRect.top + topInset;
+  const visibleBottom = Math.min(panelRect.bottom, window.innerHeight) - bottomInset;
+
+  if (caretRect.bottom > visibleBottom) {
+    els.editorPanel.scrollTop += caretRect.bottom - visibleBottom;
+  } else if (caretRect.top < visibleTop) {
+    els.editorPanel.scrollTop -= visibleTop - caretRect.top;
+  }
+}
+
+function scheduleCaretVisibility() {
+  requestAnimationFrame(keepCaretInEditorView);
+}
+
 async function saveOrRestoreNoteAndReturnToMenu() {
   const note = activeNote();
   if (note?.deletedAt) {
@@ -819,6 +875,7 @@ function runCommand(command) {
     els.bodyEditor.blur();
   }
   scheduleNoteSave();
+  scheduleCaretVisibility();
 }
 
 function applyFontSize(value) {
@@ -826,6 +883,7 @@ function applyFontSize(value) {
   document.execCommand("fontSize", false, value);
   els.bodyEditor.focus();
   scheduleNoteSave();
+  scheduleCaretVisibility();
   els.fontSizeSelect.value = "";
 }
 
@@ -833,6 +891,7 @@ function applyFontColor(value) {
   document.execCommand("foreColor", false, value);
   els.bodyEditor.focus();
   scheduleNoteSave();
+  scheduleCaretVisibility();
 }
 
 function insertImage(file) {
@@ -840,6 +899,7 @@ function insertImage(file) {
   reader.onload = () => {
     document.execCommand("insertImage", false, reader.result);
     scheduleNoteSave();
+    scheduleCaretVisibility();
   };
   reader.readAsDataURL(file);
 }
@@ -1527,7 +1587,10 @@ function bindEvents() {
     closeMoveDialog();
   });
   els.titleInput.addEventListener("input", scheduleNoteSave);
-  els.bodyEditor.addEventListener("input", scheduleNoteSave);
+  els.bodyEditor.addEventListener("input", handleBodyEditorInput);
+  els.bodyEditor.addEventListener("keyup", scheduleCaretVisibility);
+  els.bodyEditor.addEventListener("paste", scheduleCaretVisibility);
+  els.bodyEditor.addEventListener("focus", scheduleCaretVisibility);
   document.querySelector(".bottom-toolbar").addEventListener("pointerdown", (event) => {
     if (event.target.closest("[data-command], #saveNoteButton, #deleteNoteButton, #toolbarToggleButton, #imageButton")) {
       event.preventDefault();

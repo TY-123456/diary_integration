@@ -453,6 +453,7 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  scroll-padding-bottom: 150px;
   background: #11100e;
 }
 
@@ -524,7 +525,7 @@ button:disabled {
 
 .body-editor {
   min-height: 330px;
-  padding: 22px 0 90px;
+  padding: 22px 0 150px;
   color: var(--text);
   font-size: 18px;
   line-height: 1.7;
@@ -862,6 +863,14 @@ button:disabled {
   .editor-card {
     min-height: calc(100vh - 56px);
     padding: 12px 10px;
+  }
+
+  .editor-panel {
+    scroll-padding-bottom: 220px;
+  }
+
+  .body-editor {
+    padding-bottom: 220px;
   }
 
   .note-list-collapsed .editor-meta {
