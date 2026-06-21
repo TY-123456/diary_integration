@@ -800,7 +800,7 @@ button:disabled {
   }
 
   .workspace {
-    grid-template-columns: minmax(118px, 42vw) minmax(0, 1fr);
+    grid-template-columns: minmax(168px, 48vw) minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     height: 100vh;
   }
@@ -953,7 +953,7 @@ button:disabled {
 
 @media (max-width: 560px) {
   .workspace {
-    grid-template-columns: minmax(112px, 42vw) minmax(0, 1fr);
+    grid-template-columns: minmax(168px, 50vw) minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
 
@@ -968,11 +968,9 @@ button:disabled {
     min-height: 54px;
   }
 
-  .move-note-button {
-    max-width: 122px;
-  }
-
   .panel-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 }
