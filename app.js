@@ -30,6 +30,7 @@ const els = {
   trashButton: document.querySelector("#trashButton"),
   trashCount: document.querySelector("#trashCount"),
   moveNoteButton: document.querySelector("#moveNoteButton"),
+  restoreAllTrashButton: document.querySelector("#restoreAllTrashButton"),
   deleteAllTrashButton: document.querySelector("#deleteAllTrashButton"),
   collapseListButton: document.querySelector("#collapseListButton"),
   showListButton: document.querySelector("#showListButton"),
@@ -247,6 +248,7 @@ function repairDisplayNote(note) {
     body: note.body || "",
     deletedAt: note.deletedAt || null,
     originalFolderId: note.originalFolderId || null,
+    originalFolderName: note.originalFolderName || null,
   };
 }
 
@@ -322,8 +324,11 @@ function renderMoveButton() {
   const note = activeNote();
   const inTrash = state.activeFolderId === TRASH_FOLDER_ID;
   els.moveNoteButton.hidden = inTrash;
+  els.restoreAllTrashButton.hidden = !inTrash;
   els.deleteAllTrashButton.hidden = !inTrash;
-  els.deleteAllTrashButton.disabled = !state.notes.some((item) => item.deletedAt);
+  const hasTrash = state.notes.some((item) => item.deletedAt);
+  els.restoreAllTrashButton.disabled = !hasTrash;
+  els.deleteAllTrashButton.disabled = !hasTrash;
   els.moveNoteButton.disabled = !note || state.folders.length < 2;
 
   const hasActiveFolder = Boolean(activeFolder()) && !inTrash;
@@ -469,6 +474,7 @@ async function deleteActiveFolder() {
       ...note,
       deletedAt: timestamp,
       originalFolderId: folder.id,
+      originalFolderName: folder.name,
       updatedAt: timestamp,
     });
   }
@@ -613,6 +619,7 @@ async function deleteCurrentNote() {
     ...note,
     deletedAt: timestamp,
     originalFolderId: note.folderId,
+    originalFolderName: activeFolder()?.name || null,
     updatedAt: timestamp,
   });
   const nextNote = filteredNotes().find((item) => item.id !== note.id);
@@ -639,23 +646,77 @@ async function deleteAllTrashNotes() {
 async function restoreCurrentNote() {
   const note = activeNote();
   if (!note?.deletedAt) return;
-  let folderId = note.originalFolderId && state.folders.some((folder) => folder.id === note.originalFolderId) ? note.originalFolderId : null;
-  if (!folderId) {
-    const folder = state.folders[0] || (await ensureStandaloneFolder("Notes"));
-    folderId = folder.id;
-  }
+  const folderId = await resolveRestoreFolderId(note);
   const timestamp = nowIso();
   await put("notes", {
     ...note,
     folderId,
     deletedAt: null,
     originalFolderId: null,
+    originalFolderName: null,
     updatedAt: timestamp,
   });
   state.activeFolderId = folderId;
   state.activeNoteId = note.id;
   exitEditorFocusMode();
   await loadState();
+}
+
+async function restoreAllTrashNotes() {
+  const trashedNotes = state.notes.filter((note) => note.deletedAt);
+  if (!trashedNotes.length) return;
+
+  const ok = await confirmAction({
+    title: "Restore all trash",
+    message: `Restore ${trashedNotes.length} trashed note(s) to their folders?`,
+    actionLabel: "Restore All",
+  });
+  if (!ok) return;
+
+  const timestamp = nowIso();
+  let firstRestoredFolderId = null;
+  let firstRestoredNoteId = null;
+  for (const note of trashedNotes) {
+    const folderId = await resolveRestoreFolderId(note);
+    firstRestoredFolderId ||= folderId;
+    firstRestoredNoteId ||= note.id;
+    await put("notes", {
+      ...note,
+      folderId,
+      deletedAt: null,
+      originalFolderId: null,
+      originalFolderName: null,
+      updatedAt: timestamp,
+    });
+  }
+
+  state.activeFolderId = firstRestoredFolderId || state.folders[0]?.id || null;
+  state.activeNoteId = firstRestoredNoteId;
+  exitEditorFocusMode();
+  await loadState();
+}
+
+async function resolveRestoreFolderId(note) {
+  if (note.originalFolderId && state.folders.some((folder) => folder.id === note.originalFolderId)) {
+    return note.originalFolderId;
+  }
+
+  const folderName = stripInvisibleText(note.originalFolderName);
+  if (folderName) {
+    const folder = await ensureStandaloneFolder(folderName);
+    if (!state.folders.some((item) => item.id === folder.id)) {
+      state.folders.push(folder);
+      state.folders = normalizeFolderOrder(state.folders);
+    }
+    return folder.id;
+  }
+
+  const folder = state.folders[0] || (await ensureStandaloneFolder("Restored Notes"));
+  if (!state.folders.some((item) => item.id === folder.id)) {
+    state.folders.push(folder);
+    state.folders = normalizeFolderOrder(state.folders);
+  }
+  return folder.id;
 }
 
 function closeMoveDialog() {
@@ -823,7 +884,8 @@ function keepCaretInEditorView() {
 
   const panelRect = els.editorPanel.getBoundingClientRect();
   const toolbarRect = els.toolbarWrap.getBoundingClientRect();
-  const bottomInset = Math.max(120, toolbarRect.height + 36);
+  const lineHeight = parseFloat(getComputedStyle(els.bodyEditor).lineHeight) || 32;
+  const bottomInset = Math.max(120, toolbarRect.height + 36) + lineHeight * 3;
   const topInset = 24;
   const visibleTop = panelRect.top + topInset;
   const visibleBottom = Math.min(panelRect.bottom, window.innerHeight) - bottomInset;
@@ -1502,6 +1564,7 @@ function normalizeImportedNote(note, folderIdMap, existingFolders) {
     importedAt: note.importedAt || null,
     deletedAt: note.deletedAt || null,
     originalFolderId: note.originalFolderId || null,
+    originalFolderName: note.originalFolderName || null,
   });
 }
 
@@ -1580,6 +1643,7 @@ function bindEvents() {
     render();
   });
   els.moveNoteButton.addEventListener("click", openMoveDialog);
+  els.restoreAllTrashButton.addEventListener("click", restoreAllTrashNotes);
   els.deleteAllTrashButton.addEventListener("click", deleteAllTrashNotes);
   els.moveForm.addEventListener("submit", submitMoveDialog);
   els.closeMoveDialog.addEventListener("click", (event) => {
